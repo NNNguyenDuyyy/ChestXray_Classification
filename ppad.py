@@ -314,8 +314,8 @@ class CustomCLIP(nn.Module):
             text_feature = self.text_encoder(prompts, tokenized_prompts)
             image_feature = image_features[i]
 
-            text_feature = text_feature / text_feature.norm(dim=-1, keepdim=True)
-            image_feature = image_feature / image_feature.norm(dim=-1, keepdim=True)
+            text_feature = text_feature / text_feature.norm(dim=-1, keepdim=True)  # [2, 512]
+            image_feature = image_feature / image_feature.norm(dim=-1, keepdim=True)  # [512]
 
             #combined_feature = torch.cat([text_feature, image_feature], dim=-1)
             #combined_feature = image_feature @ text_feature.t()
