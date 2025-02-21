@@ -1,0 +1,20 @@
+# Ignore Python bytecode files
+*.pyc
+__pycache__/
+
+# Ignore virtual environment directories
+venv/
+env/
+
+# Ignore IDE specific files
+.vscode/
+.idea/
+
+# Ignore other files
+*.log
+*.tmp
+best_64_0.0001_original_35000_0.864.pt
+
+PPAD_CheXpert_auc_0.896288_acc_0.842_f1_0.8301075268817204_ap_0.9075604434206554.pt
+
+*.pt
