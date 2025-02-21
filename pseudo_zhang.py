@@ -11,9 +11,9 @@ from matplotlib import pyplot as plt
 import random
 
 
-from .mask_generate_anomaly import generate_anomaly_mask
+from mask_generate_anomaly import generate_anomaly_mask
 
-from .generate_anomaly import fpi_mask_generate_anomaly
+from generate_anomaly import fpi_mask_generate_anomaly
 
 class anomaly_transform(object):
     def __init__(self, mypseudo=True, anomaly_source_images=None):
@@ -116,14 +116,14 @@ class MaskZhangTrain(torch.utils.data.Dataset):
 
                 self.data.append((img, torch.Tensor([1,0])))
             if self.shot is None:
-                items = os.listdir(os.path.join(self.root, 'pneumonia_256'))
+                items = os.listdir(os.path.join(self.root, 'abnormal_256'))
             else:
-                items = os.listdir(os.path.join(self.root, 'pneumonia_256'))[:self.shot]
+                items = os.listdir(os.path.join(self.root, 'abnormal_256'))[:self.shot]
             
             for idx, item in enumerate(items):
                 if not self.full and idx > 9:
                     break
-                img = Image.open(os.path.join(self.root, 'pneumonia_256', item)).convert('L').resize(self.img_size)
+                img = Image.open(os.path.join(self.root, 'abnormal_256', item)).convert('L').resize(self.img_size)
                 img = np.array(img)
                 img = np.stack((img,)*3, axis=-1)
                 img = Image.fromarray(img)

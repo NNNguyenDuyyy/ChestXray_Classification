@@ -4,7 +4,8 @@ import torch
 from PIL import Image
 
 from torchvision import transforms
-from PPAD.ppad_clip.ppad import PPAD
+from ppad import PPAD
+from pseudo_zhang import MaskZhangTrain
 
 import warnings
 import torch.nn as nn
@@ -12,7 +13,6 @@ import torch.nn as nn
 warnings.filterwarnings("ignore")
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
-STATUS = ['normal', 'pneumonia']
 
 class AnomalyFeature(nn.Module):
     """
@@ -32,14 +32,14 @@ class AnomalyFeature(nn.Module):
         super(AnomalyFeature, self).__init__()
 
         # model_path = "./best_64_0.0001_original_35000_0.864.pt"
-        self.model = PPAD(STATUS=STATUS,
+        self.model = PPAD(STATUS,
                           backbone_name=backbone_name, 
                           n_ctx=n_ctx,
                           class_specify=class_specify,
                           class_token_position=class_token_position,
                           pretrained_dir=pretrained_dir,
                           pos_embedding=pos_embedding,
-                          return_tokens=return_tokens
+                          return_tokens=False
                          )
 
 
@@ -57,12 +57,12 @@ class AnomalyFeature(nn.Module):
         self.model.to(device)
 
 
-        self.test_transform = transforms.Compose([
-            transforms.Resize(size=224, interpolation=Image.BICUBIC),
-            transforms.CenterCrop(size=(224, 224)),
-            transforms.ToTensor(),
-            transforms.Normalize(mean=[0.39799, 0.39799, 0.39799], std=[0.32721349, 0.32721349, 0.32721349])
-        ])
+        # self.test_transform = transforms.Compose([
+        #     transforms.Resize(size=224, interpolation=Image.BICUBIC),
+        #     transforms.CenterCrop(size=(224, 224)),
+        #     transforms.ToTensor(),
+        #     transforms.Normalize(mean=[0.39799, 0.39799, 0.39799], std=[0.32721349, 0.32721349, 0.32721349])
+        # ])
 
 
         # test_dataset = MaskZhangTrain('./chexpert/our_test_256_pa', train=False, transforms=self.test_transform)
@@ -98,7 +98,7 @@ class AnomalyFeature(nn.Module):
                     # abnormal_probs = probs[:,1]
 
                     temp_results.append(anomaly_per_image)
-                temp_results = torch.stack(temp_results, dim=0)
+                #temp_results = torch.stack(temp_results, dim=0)
                 all_results.append(temp_results)
                 #max_results = temp_results.max(dim=0)[0]
                 #mean_results = temp_results.mean(dim=0)
@@ -113,7 +113,7 @@ class AnomalyFeature(nn.Module):
                 # labels = labels.argmax(dim=-1).cpu().numpy()
                 # all_labels.append(labels)
         print(len(all_results))
-        print(all_results[0].shape)
+        print(all_results[0])
         return all_results
 
 
@@ -125,6 +125,28 @@ class AnomalyFeature(nn.Module):
 # acc = metrics.accuracy_score(all_labels, all_results>0.5)
 
 # print("acc:", acc, "auc:", auc,  "f1:", f1, "ap:", ap )
+if __name__ == "__main__":
+  model_path = "/content/ChestXray_Classification/weight/best_64_0.0001_original_35000_0.864.pt"
+  learner_weight_path = "/content/ChestXray_Classification/weight/PPAD_CheXpert_auc_0.896288_acc_0.842_f1_0.8301075268817204_ap_0.9075604434206554.pt"
+  test_transform = transforms.Compose([
+            transforms.Resize(size=224, interpolation=Image.BICUBIC),
+            transforms.CenterCrop(size=(224, 224)),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.39799, 0.39799, 0.39799], std=[0.32721349, 0.32721349, 0.32721349])
+        ])
+  test_dataset = MaskZhangTrain("/content/ChestXray_Classification/our_test_256_pa", train=False, transforms=test_transform)
+  testloader = torch.utils.data.DataLoader(test_dataset, batch_size=2048, shuffle=False, num_workers=32)
+
+  device = "cuda" if torch.cuda.is_available() else "cpu"
+
+  STATUS = ['normal', 'pneumonia']
+  backbone_name='ViT-B/32'
+  anomaly_extract = AnomalyFeature(STATUS, backbone_name=backbone_name, pretrained_dir=model_path, learner_weight_path=learner_weight_path,n_ctx=16, 
+                class_specify=False, 
+                class_token_position="end", 
+                pos_embedding=True,
+                return_tokens=False)
+  output = anomaly_extract(testloader)
 
 
 

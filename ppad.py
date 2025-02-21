@@ -1,11 +1,11 @@
 import torch
 import torch.nn as nn 
 import torch.nn.functional as F
-from . import clip
-from . import model
+import clip
+import model
 
 
-from .simple_tokenizer import SimpleTokenizer as _Tokenizer
+from simple_tokenizer import SimpleTokenizer as _Tokenizer
 import os
 
 
@@ -317,13 +317,16 @@ class CustomCLIP(nn.Module):
             text_feature = text_feature / text_feature.norm(dim=-1, keepdim=True)
             image_feature = image_feature / image_feature.norm(dim=-1, keepdim=True)
 
-            combined_feature = torch.cat([text_feature, image_feature], dim=-1)
+            #combined_feature = torch.cat([text_feature, image_feature], dim=-1)
+            #combined_feature = image_feature @ text_feature.t()
+            combined_feature = [text_feature.shape, image_feature.shape]
+            anomaly_features.append(combined_feature)
             #logit = self.logit_scale.exp() * image_feature @ text_feature.t()
             #logits.append(logit)
 
 
         #logits = torch.stack(logits, dim=0)
-        anomaly_features = torch.stack(combined_feature, dim=0)
+        #anomaly_features = torch.stack(combined_feature, dim=0)
         #return logits
         return anomaly_features
 
