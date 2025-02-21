@@ -29,7 +29,7 @@ if __name__ == "__main__":
 
     output_classify = classifier(output_attn)
 
-    print(f"Output shape: {output_classify.shape}")
+    print(f"Output shape: {output_classify.shape}")   # [bs, num_classes]
 
     probs = torch.softmax(output_classify, dim=-1)
     print(f"Class Probabilities: {probs}")

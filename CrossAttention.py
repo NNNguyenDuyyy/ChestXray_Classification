@@ -29,9 +29,9 @@ class CrossAttention(nn.Module):
     
 if __name__ == "__main__":
     anomaly_feature = torch.randn(1, 1, 1024)
-    input_image_feature = torch.rand(1, 1, 512)
+    input_image_feature = torch.rand(1, 1, 768)
 
-    cross_attn = CrossAttention(dim_q=1024, dim_kv=512)
+    cross_attn = CrossAttention(dim_q=1024, dim_kv=768)
 
     output = cross_attn(anomaly_feature, input_image_feature)
     print(f"Output shape: {output.shape}")   # Expected: [1, 1, 1024]
