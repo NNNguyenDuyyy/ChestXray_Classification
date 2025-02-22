@@ -10,7 +10,7 @@ if __name__ == "__main__":
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.39799, 0.39799, 0.39799], std=[0.32721349, 0.32721349, 0.32721349])
         ])
-    test_dataset = MaskZhangTrain(r"ChestXray_Classification\3_images_to_test", train=False, transforms=test_transform)
+    test_dataset = MaskZhangTrain("3_images_to_test", train=False, transforms=test_transform)
     testloader = torch.utils.data.DataLoader(test_dataset, batch_size=2048, shuffle=False, num_workers=32)
 
     print(len(testloader))
