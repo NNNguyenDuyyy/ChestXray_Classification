@@ -273,9 +273,79 @@ class ImageMaskLearner(nn.Module):
             mask_embedding = self.mask_embedding
 
         return mask.to(dtype=self.dtype), mask_embedding.to(dtype=self.dtype) 
-
+    
 
 class CustomCLIP(nn.Module):
+    def __init__(self, classnames, backbone_name='ViT-B/32', n_ctx=16, ctx_init="", cfg_imsize=224, class_specify=False, class_token_position='middle', pretrained_dir=None):
+        super().__init__()
+
+        clip_model = load_clip_to_cpu(backbone_name, pretrained_dir)        
+        self.dtype = clip_model.dtype
+
+        self.prompt_learner = PromptLearner(classnames, clip_model, n_ctx=n_ctx, ctx_init=ctx_init, cfg_imsize=cfg_imsize, class_specify=class_specify, class_token_position=class_token_position)
+        self.image_encoder = ImageEncoder(clip_model)
+        self.image_mask_learner = ImageMaskLearner(clip_model.image_resolution, clip_model.vision_patch_size, clip_model.vision_width, self.dtype)
+        self.text_encoder = TextEncoder(clip_model)
+        self.logit_scale = clip_model.logit_scale
+
+
+    def forward(self, image, pos_embedding=False, return_token=False, image_mask=None, position_name=""):
+        if self.image_encoder.training:
+            self.image_encoder.eval()
+            self.text_encoder.eval()
+        if image_mask is not None:
+            mask, mask_embedding = self.image_mask_learner(image_mask)
+        else:
+            mask = None
+            mask_embedding = None
+        if return_token:
+            image_features, token_features = self.image_encoder(image.type(self.dtype), return_token=return_token, pos_embedding=pos_embedding, mask=mask, mask_embedding=mask_embedding)
+        else:
+            image_features = self.image_encoder(image.type(self.dtype), return_token=return_token, pos_embedding=pos_embedding, mask=mask, mask_embedding=mask_embedding)
+        
+        
+        device = image.device
+
+        logits = []
+        for i in range(len(position_name)):
+            p_name = position_name[i] 
+            prompts, tokenized_prompts = self.prompt_learner(position_name=p_name, device=device)
+            text_feature = self.text_encoder(prompts, tokenized_prompts)
+            image_feature = image_features[i]
+
+            text_feature = text_feature / text_feature.norm(dim=-1, keepdim=True)
+            image_feature = image_feature / image_feature.norm(dim=-1, keepdim=True)
+
+            logit = self.logit_scale.exp() * image_feature @ text_feature.t()
+            logits.append(logit)
+
+
+        logits = torch.stack(logits, dim=0)
+
+        return logits
+
+
+class PPAD(nn.Module):
+    def __init__(self, classnames, backbone_name='ViT-B/32', n_ctx=16, ctx_init="", cfg_imsize=224, class_specify=False, class_token_position='middle', pretrained_dir=None, pos_embedding=False, return_tokens=False):
+        super().__init__()
+        self.num_clip = len(classnames)
+        self.classnames = classnames 
+        self.customclip = CustomCLIP(classnames=classnames,
+                              backbone_name=backbone_name,
+                              n_ctx=n_ctx, ctx_init=ctx_init,
+                              cfg_imsize=cfg_imsize,
+                              class_specify=class_specify,
+                              class_token_position=class_token_position,
+                              pretrained_dir=pretrained_dir)
+        self.pos_embedding = pos_embedding
+        self.return_tokens = return_tokens
+
+    def forward(self, image, mask=None, position_name=""):
+        logits = self.customclip(image, pos_embedding=self.pos_embedding, return_token=self.return_tokens, image_mask=mask, position_name=position_name)
+        return logits
+    
+
+class ExtractAnomalyFeature(nn.Module):
     def __init__(self, classnames, backbone_name='ViT-B/32', n_ctx=16, ctx_init="", cfg_imsize=224, class_specify=False, class_token_position='middle', pretrained_dir=None):
         super().__init__()
 
@@ -332,12 +402,12 @@ class CustomCLIP(nn.Module):
 
 
 
-class PPAD(nn.Module):
+class AnomalyEncoder(nn.Module):
     def __init__(self, classnames, backbone_name='ViT-B/32', n_ctx=16, ctx_init="", cfg_imsize=224, class_specify=False, class_token_position='middle', pretrained_dir=None, pos_embedding=False, return_tokens=False):
         super().__init__()
         self.num_clip = len(classnames)
         self.classnames = classnames 
-        self.customclip = CustomCLIP(classnames=classnames,
+        self.customclip = ExtractAnomalyFeature(classnames=classnames,
                               backbone_name=backbone_name,
                               n_ctx=n_ctx, ctx_init=ctx_init,
                               cfg_imsize=cfg_imsize,
