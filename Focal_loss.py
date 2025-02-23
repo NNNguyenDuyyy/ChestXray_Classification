@@ -7,7 +7,7 @@ class FocalLoss(nn.Module):
     Focal Loss for classification tasks
     """
 
-    def __init__(self, alpha=None, gamma=2.0, reduction='mean'):
+    def __init__(self, alpha=0.25, gamma=2.0, reduction='mean'):
         """
         Args:
             alpha: class weighting factor
@@ -18,34 +18,25 @@ class FocalLoss(nn.Module):
         self.gamma = gamma
         self.reduction = reduction
 
-    def forward(self, logits, targets):
+    def forward(self, inputs, targets):
         """
         logits: predicted output [bs, num_classes]
         targets: groung truth labels
         """
-        probs = F.softmax(logits, dim=-1)
-        target_probs = probs.gather(dim=-1, index=targets.unsqueeze(-1)).squeeze(-1) # Extract true class prob
+        prob = torch.sigmoid(inputs)
+        ce_loss = F.binary_cross_entropy_with_logits(inputs, targets, reduction='none')
+        p_t = prob * targets + (1 - prob) * (1 - targets)
 
         # Compute focal weight (1 - p_t)^gamma
-        focal_weight = (1 - target_probs) ** self.gamma
-
-        # Compute Cross-Entropy loss
-        ce_loss = -torch.log(target_probs + 1e-8)
-
-        # Apply alpha weighting
-        if self.alpha is not None:
-            alpha_weight = self.alpha[targets] if isinstance(self.alpha, torch.Tensor) else self.alpha
-            ce_loss *= alpha_weight
-
-        # Compute final loss
-        loss = focal_weight * ce_loss
+        focal_loss = self.alpha * (1 - p_t) ** self.gamma * ce_loss
 
         # Apply reduction
         if self.reduction == 'mean':
-            return loss.mean()
+            return focal_loss.mean()
         elif self.reduction == 'sum':
-            return loss.sum()
-        return loss
+            return focal_loss.sum()
+        else: 
+            return focal_loss
     
 if __name__ == "__main__":
     # Example logits and ground truth labels

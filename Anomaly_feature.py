@@ -72,7 +72,8 @@ class AnomalyFeature(nn.Module):
         self.model.eval()
 
     def forward(self, testloader):
-        all_results = []
+        all_img_features = []
+        all_text_features = []
         #all_labels = []
         with torch.no_grad():
             for i, (img, labels, masks, position_names) in enumerate(testloader):
@@ -80,13 +81,14 @@ class AnomalyFeature(nn.Module):
                 image = img.to(device)
                 labels = labels.to(dtype=image.dtype, device=image.device)
 
-                temp_results = []
+                img_features = []
+                text_features = []
                 for mask, position_name in zip(masks, position_names):
             
                     mask = mask.to(dtype=image.dtype, device=image.device)
 
                     #logits_per_image = self.model(image, mask, position_name)
-                    anomaly_per_image = self.model(image, mask, position_name)
+                    img_feature, text_feature = self.model(image, mask, position_name)
 
                     # new_logits_per_image = torch.zeros((logits_per_image.shape[0],2))
                     # logits_per_image = logits_per_image.cpu()
@@ -97,9 +99,11 @@ class AnomalyFeature(nn.Module):
             
                     # abnormal_probs = probs[:,1]
 
-                    temp_results.append(anomaly_per_image)
+                    img_features.append(img_feature)
+                    text_features.append(text_feature)
                 #temp_results = torch.stack(temp_results, dim=0)
-                all_results.append(temp_results)
+                all_img_features.append(torch.stack(img_features, dim=0))
+                all_text_features.append(torch.stack(text_features, dim=0))
                 #max_results = temp_results.max(dim=0)[0]
                 #mean_results = temp_results.mean(dim=0)
 
@@ -112,9 +116,9 @@ class AnomalyFeature(nn.Module):
 
                 # labels = labels.argmax(dim=-1).cpu().numpy()
                 # all_labels.append(labels)
-        print(len(all_results))
-        print(all_results[0])
-        return all_results
+        print(all_img_features[0].shape)
+        print(all_text_features[0].shape)
+        return all_img_features, all_text_features
 
 
 # all_results = np.array(all_results)
@@ -126,27 +130,27 @@ class AnomalyFeature(nn.Module):
 
 # print("acc:", acc, "auc:", auc,  "f1:", f1, "ap:", ap )
 if __name__ == "__main__":
-  model_path = "/content/ChestXray_Classification/weight/best_64_0.0001_original_35000_0.864.pt"
-  learner_weight_path = "/content/ChestXray_Classification/weight/PPAD_CheXpert_auc_0.896288_acc_0.842_f1_0.8301075268817204_ap_0.9075604434206554.pt"
-  test_transform = transforms.Compose([
+    model_path = "/content/ChestXray_Classification/weight/best_64_0.0001_original_35000_0.864.pt"
+    learner_weight_path = "/content/ChestXray_Classification/weight/PPAD_CheXpert_auc_0.896288_acc_0.842_f1_0.8301075268817204_ap_0.9075604434206554.pt"
+    test_transform = transforms.Compose([
             transforms.Resize(size=224, interpolation=Image.BICUBIC),
             transforms.CenterCrop(size=(224, 224)),
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.39799, 0.39799, 0.39799], std=[0.32721349, 0.32721349, 0.32721349])
         ])
-  test_dataset = MaskZhangTrain("/content/ChestXray_Classification/our_test_256_pa", train=False, transforms=test_transform)
-  testloader = torch.utils.data.DataLoader(test_dataset, batch_size=2048, shuffle=False, num_workers=32)
+    test_dataset = MaskZhangTrain("/content/ChestXray_Classification/our_test_256_pa", train=False, transforms=test_transform)
+    testloader = torch.utils.data.DataLoader(test_dataset, batch_size=2048, shuffle=False, num_workers=32)
 
-  device = "cuda" if torch.cuda.is_available() else "cpu"
+    device = "cuda" if torch.cuda.is_available() else "cpu"
 
-  STATUS = ['normal', 'pneumonia']
-  backbone_name='ViT-B/32'
-  anomaly_extract = AnomalyFeature(STATUS, backbone_name=backbone_name, pretrained_dir=model_path, learner_weight_path=learner_weight_path,n_ctx=16, 
+    STATUS = ['normal', 'pneumonia']
+    backbone_name='ViT-B/32'
+    anomaly_extract = AnomalyFeature(STATUS, backbone_name=backbone_name, pretrained_dir=model_path, learner_weight_path=learner_weight_path,n_ctx=16, 
                 class_specify=False, 
                 class_token_position="end", 
                 pos_embedding=True,
                 return_tokens=False)
-  output = anomaly_extract(testloader)
+    img_features, text_features = anomaly_extract(testloader)
 
 
 
