@@ -93,6 +93,7 @@ def main():
                                     feature_dim=512, 
                                     num_heads=8, 
                                     num_labels=10, 
+                                    dropout=0.1,
                                     fusion_type="concat")
     model.to(device)
     

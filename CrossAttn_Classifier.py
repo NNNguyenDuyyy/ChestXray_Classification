@@ -11,7 +11,7 @@ class CrossAttentionFusion(nn.Module):
         # MultiheadAttention expects inputs of shape (seq_len, batch, embed_dim)
         self.cross_attn = nn.MultiheadAttention(embed_dim=feature_dim, num_heads=num_heads, dropout=dropout)
         self.norm = nn.LayerNorm(feature_dim)
-        self.dropout = nn.Dropout(dropout)
+        #self.dropout = nn.Dropout(dropout)
     
     def forward(self, img_feature, text_features):
         """

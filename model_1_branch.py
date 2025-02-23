@@ -3,7 +3,6 @@ import sys
 sys.path.append('..')
 import torch.nn as nn
 from CrossAttn_Classifier import MultiLabelClassifierWithAnomaly
-from ViT_model import VitModel
 from Anomaly_feature import AnomalyFeature
 from torchvision.models import vit_b_16
 from torchvision import transforms
@@ -24,6 +23,7 @@ class Approach1BranchBaseline(nn.Module):
                 feature_dim,  
                 num_heads, 
                 num_labels,
+                dropout,
                 fusion_type="concat"):
         """
         Args:
@@ -37,12 +37,13 @@ class Approach1BranchBaseline(nn.Module):
                                                     backbone_name, 
                                                     pretrained_dir,
                                                     learner_weight_path,
+                                                    dropout,
                                                     n_ctx=16, 
                                                     class_specify=False, 
                                                     class_token_position="end", 
                                                     pos_embedding=True,
                                                     return_tokens=False)
-        self.cross_attt_classifier = MultiLabelClassifierWithAnomaly(feature_dim, num_heads, num_labels, fusion_type)
+        self.cross_attt_classifier = MultiLabelClassifierWithAnomaly(feature_dim, num_heads, num_labels, dropout, fusion_type)
 
     def forward(self, testloader):
         img_features, text_features = self.extract_anomaly_feature(testloader)  # [bs, 5, 512],  [bs, 5, 2, 512]
@@ -59,6 +60,8 @@ if __name__ == "__main__":
     feature_dim = 512
     num_labels = 15  # Number of multi-label outputs
     num_heads = 2
+    dropout = 0.1
+    fusion_type = "concat"
     backbone_name='ViT-B/32'
     model_path = "/content/ChestXray_Classification/weight/best_64_0.0001_original_35000_0.864.pt"
     learner_weight_path = "/content/ChestXray_Classification/weight/PPAD_CheXpert_auc_0.896288_acc_0.842_f1_0.8301075268817204_ap_0.9075604434206554.pt"
@@ -71,7 +74,10 @@ if __name__ == "__main__":
                                 learner_weight_path,
                                 feature_dim,
                                 num_heads, 
-                                num_labels)
+                                num_labels,
+                                dropout,
+                                fusion_type)
+    pipeline.to(device)
     
     test_transform = transforms.Compose([
             transforms.Resize(size=224, interpolation=Image.BICUBIC),
