@@ -3,7 +3,7 @@ import sys
 sys.path.append('..')
 import torch.nn as nn
 from CrossAttn_Classifier import MultiLabelClassifierWithAnomaly
-from Anomaly_feature import AnomalyFeature
+from ppad import AnomalyEncoder
 from torchvision.models import vit_b_16
 from torchvision import transforms
 from PIL import Image
@@ -15,10 +15,9 @@ class Approach1BranchBaseline(nn.Module):
     """
 
     def __init__(self, 
-                base_model_extract_image, 
                 STATUS, 
                 backbone_name,
-                pretrained_dir,
+                model_path,
                 learner_weight_path,
                 feature_dim,  
                 num_heads, 
@@ -32,22 +31,31 @@ class Approach1BranchBaseline(nn.Module):
             num_classes: Number of dataset classes
         """
         super(Approach1BranchBaseline, self).__init__()
-        self.extract_anomaly_feature = AnomalyFeature(
+        self.extract_anomaly_feature = AnomalyEncoder(
                                                     STATUS,
                                                     backbone_name, 
-                                                    pretrained_dir,
-                                                    learner_weight_path,
-                                                    dropout,
-                                                    n_ctx=16, 
+                                                    n_ctx=16,
                                                     class_specify=False, 
                                                     class_token_position="end", 
+                                                    pretrained_dir=model_path,
                                                     pos_embedding=True,
                                                     return_tokens=False)
+        
+        learner_weights = torch.load(learner_weight_path)
+
+        for name, _ in self.extract_anomaly_feature.named_parameters():
+            if name == "customclip.image_mask_learner.mask_embedding":
+                self.extract_anomaly_feature.state_dict()[name].copy_(learner_weights["image_mask_learner"]["mask_embedding"])
+            elif name == "customclip.prompt_learner.ctx":
+                self.extract_anomaly_feature.state_dict()[name].copy_(learner_weights["prompt_learner_ctx"]["ctx"])
+
+
+        self.extract_anomaly_feature.to(device).eval()
         self.cross_attt_classifier = MultiLabelClassifierWithAnomaly(feature_dim, num_heads, num_labels, dropout, fusion_type)
 
-    def forward(self, testloader):
-        img_features, text_features = self.extract_anomaly_feature(testloader)  # [bs, 5, 512],  [bs, 5, 2, 512]
-        logits, attn_weights = self.cross_attt_classifier(img_features, text_features)   # [bs, num_classes]
+    def forward(self, x):
+        img_features, text_features = self.extract_anomaly_feature(x)  # [bs, 5, 512],  [bs, 5, 2, 512]
+        logits, _ = self.cross_attt_classifier(img_features, text_features)   # [bs, num_classes]
         print(logits.shape)
         return logits
     
@@ -55,8 +63,6 @@ if __name__ == "__main__":
     base_model_extract_image = vit_b_16(pretrained=True)
     device = "cuda" if torch.cuda.is_available() else "cpu"
     STATUS = ['normal', 'pneumonia']
-    batch_size = 4
-    num_tokens = 5  # 5 image tokens per sample
     feature_dim = 512
     num_labels = 15  # Number of multi-label outputs
     num_heads = 2

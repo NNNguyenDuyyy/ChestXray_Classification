@@ -4,7 +4,7 @@ import torch
 from PIL import Image
 
 from torchvision import transforms
-from ppad import PPAD
+from ppad import AnomalyEncoder
 from pseudo_zhang import MaskZhangTrain
 
 import warnings
@@ -32,7 +32,7 @@ class AnomalyFeature(nn.Module):
         super(AnomalyFeature, self).__init__()
 
         # model_path = "./best_64_0.0001_original_35000_0.864.pt"
-        self.model = PPAD(STATUS,
+        self.model = AnomalyEncoder(STATUS,
                           backbone_name=backbone_name, 
                           n_ctx=n_ctx,
                           class_specify=class_specify,

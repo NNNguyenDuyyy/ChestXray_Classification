@@ -377,7 +377,8 @@ class ExtractAnomalyFeature(nn.Module):
         device = image.device
 
         #logits = []
-        anomaly_features = []
+        all_img_features = []
+        all_text_features = []
         for i in range(len(position_name)):
             p_name = position_name[i] 
             prompts, tokenized_prompts = self.prompt_learner(position_name=p_name, device=device)
@@ -389,16 +390,19 @@ class ExtractAnomalyFeature(nn.Module):
 
             #combined_feature = torch.cat([text_feature, image_feature], dim=-1)
             #combined_feature = image_feature @ text_feature.t()
-            combined_feature = [text_feature.shape, image_feature.shape]
-            anomaly_features.append(combined_feature)
+            all_img_features.append(image_feature)
+            all_text_features.append(text_feature)
             #logit = self.logit_scale.exp() * image_feature @ text_feature.t()
             #logits.append(logit)
 
 
         #logits = torch.stack(logits, dim=0)
+        all_img_features = torch.stack(all_img_features, dim=0)
+        all_text_features = torch.stack(all_text_features, dim=0)
+        print(all_img_features.shape, all_text_features.shape)
         #anomaly_features = torch.stack(combined_feature, dim=0)
         #return logits
-        return anomaly_features
+        return all_img_features, all_text_features
 
 
 
@@ -409,7 +413,8 @@ class AnomalyEncoder(nn.Module):
         self.classnames = classnames 
         self.customclip = ExtractAnomalyFeature(classnames=classnames,
                               backbone_name=backbone_name,
-                              n_ctx=n_ctx, ctx_init=ctx_init,
+                              n_ctx=n_ctx, 
+                              ctx_init=ctx_init,
                               cfg_imsize=cfg_imsize,
                               class_specify=class_specify,
                               class_token_position=class_token_position,
@@ -419,6 +424,6 @@ class AnomalyEncoder(nn.Module):
 
     def forward(self, image, mask=None, position_name=""):
         #logits
-        anomaly_features = self.customclip(image, pos_embedding=self.pos_embedding, return_token=self.return_tokens, image_mask=mask, position_name=position_name)
+        img_features, text_features = self.customclip(image, pos_embedding=self.pos_embedding, return_token=self.return_tokens, image_mask=mask, position_name=position_name)
         #return logits
-        return anomaly_features
+        return img_features, text_features
