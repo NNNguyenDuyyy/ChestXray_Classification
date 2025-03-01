@@ -201,7 +201,7 @@ if __name__ == "__main__":
     batch_size = 64
     epochs = 10
 
-    train_df_main = pd.read_csv('../input/chestxray8-dataframe/train_df.csv')
+    train_df_main = pd.read_csv('/kaggle/input/chestxray8-dataframe/train_df.csv')
     train_df_main.drop(['No Finding'], axis=1, inplace=True)
     labels = train_df_main.columns[2:-1].tolist()
 

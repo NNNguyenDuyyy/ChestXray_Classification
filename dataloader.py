@@ -85,7 +85,7 @@ class ChestXrayDataSet(torch.utils.data.Dataset):
     def load_data(self):
 
         for idx in range(len(self.dataframe)):
-            img_path = self.dataframe.iloc[idx]['FilePath']
+            img_path = self.dataframe.iloc[idx]['FilePath'].replace('..', '/kaggle')
             img = Image.open(img_path).convert('L').resize(self.img_size)
             img = np.array(img)
             img = np.stack((img,)*3, axis=-1)
