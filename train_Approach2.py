@@ -1,6 +1,6 @@
 import torch
 from torchvision import models
-from torchsummary import summary
+#from torchsummary import summary
 import torch.nn as nn
 import torch.optim as optim
 import numpy as np
@@ -278,7 +278,7 @@ if __name__ == "__main__":
       return {k: v.to(device) for k, v in batch.items() if isinstance(v, torch.Tensor)}
     
     # Summary
-    summary(model, (3, 224, 224))
+    #summary(model, (3, 224, 224))
 
     # Train model
     model, history = train_model(
