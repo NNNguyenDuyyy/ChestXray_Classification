@@ -97,7 +97,7 @@ class ChestXrayDataSet(torch.utils.data.Dataset):
         print('%d data loaded from: %s' % (len(self.data), self.dataframe))
 
     # Function to get data transforms
-    def get_data_transforms(img_size, mode):
+    def get_data_transforms(self, img_size, mode):
         if mode == "train":
             train_transform = transforms.Compose([
                 transforms.Resize((img_size[0], img_size[1])),
