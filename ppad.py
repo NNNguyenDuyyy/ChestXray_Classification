@@ -377,7 +377,7 @@ class ExtractAnomalyFeature(nn.Module):
         device = image.device
 
         #logits = []
-        combined_image_text_features = []
+        combined_image_text_feature = []
         for i in range(len(position_name)):
             p_name = position_name[i] 
             prompts, tokenized_prompts = self.prompt_learner(position_name=p_name, device=device)
@@ -406,17 +406,17 @@ class ExtractAnomalyFeature(nn.Module):
             #paired_features = torch.stack([image_feature_expanded, text_feature], dim=1)  # Shape (2, 2, 512)
 
             # Append to list
-            combined_image_text_features.append(combined_feature)
+            combined_image_text_feature.append(combined_feature)
 
 
         #logits = torch.stack(logits, dim=0)
         # all_img_features = torch.stack(all_img_features, dim=0)
         # all_text_features = torch.stack(all_text_features, dim=0)
-        combined_image_text_features = torch.stack(combined_image_text_features, dim=0)  # Shape (10, 2, 512)
-        print(combined_image_text_features.shape)
+        combined_image_text_feature = torch.stack(combined_image_text_feature, dim=0)  # Shape (10, 2, 512)
+        print(combined_image_text_feature.shape)
         #anomaly_features = torch.stack(combined_feature, dim=0)
         #return logits
-        return combined_image_text_features
+        return combined_image_text_feature
 
 
 
@@ -438,6 +438,7 @@ class AnomalyEncoder(nn.Module):
 
     def forward(self, image, mask=None, position_name=""):
         #logits
-        combined_image_text_features = self.customclip(image, pos_embedding=self.pos_embedding, return_token=self.return_tokens, image_mask=mask, position_name=position_name)
+        anomaly_feature = self.customclip(image, pos_embedding=self.pos_embedding, return_token=self.return_tokens, image_mask=mask, position_name=position_name)
         #return logits
-        return combined_image_text_features
+        print(anomaly_feature.shape)
+        return anomaly_feature
