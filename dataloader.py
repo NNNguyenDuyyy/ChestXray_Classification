@@ -38,29 +38,30 @@ class anomaly_transform(object):
             new_img = Image.fromarray(new_img)
 
             return new_img, torch.Tensor([0,1])
-
-
+        
 
 class ChestXrayDataSet(torch.utils.data.Dataset):
-    def __init__(self, root, mypseudo=True, train=True, img_size=(224, 224), transforms=None, enable_transform=True, full=True, shot=None, prob=0.5):
+    def __init__(self,  
+                dataframe,
+                img_size=(224, 224), 
+                mode='train', 
+                ):
+        """
+        dataframe: pandas dataframe
+        img_size: tuple
+        model: ["train", "val", "test"]
+        """
 
         self.data = []
-        self.train = train
-        self.root = root
-        self.img_size = img_size
+        self.img_size = img_size  
+        self.transforms = self.get_data_transforms(img_size, mode)
 
-        self.full = full
-        self.shot = shot   
-        self.transforms = transforms
+        self.dataframe = dataframe
+        self.labels = self.dataframe.iloc[:, 2:-1].values  # Assuming columns 2 to n-1 are labels
+
         self.load_data()
 
-        if mypseudo == False:
-
-            self.anomaly_source_images = self.load_anomaly_source_images()
-            self.anomaly_transform = anomaly_transform(mypseudo=False, anomaly_source_images=self.anomaly_source_images)
-        
-        else:
-            self.anomaly_transform = anomaly_transform()
+        self.anomaly_transform = anomaly_transform()
 
         mask_1 = torch.zeros((224, 224, 1))
         mask_1[:, 0:112, :] = 1
@@ -80,157 +81,53 @@ class ChestXrayDataSet(torch.utils.data.Dataset):
         self.masks = [mask_1, mask_2, mask_3, mask_4, mask_5]
         self.position_names = ["left lung", "right lung", "upper lung", "lower lung", ""]
 
-        
-        self.prob = prob
 
-
-    # def load_data(self):
-    #     if self.train:
-    #         if self.shot is None:
-    #             items = os.listdir(os.path.join(self.root, 'normal_256'))
-    #         else:
-    #             items = random.sample(os.listdir(os.path.join(self.root, 'normal_256')), self.shot)
-
-
-    #         for item in items:
-    #             img = Image.open(os.path.join(self.root, 'normal_256', item)).convert('L').resize(self.img_size)
-    #             img = np.array(img)
-    #             img = np.stack((img,)*3, axis=-1)
-    #             img = Image.fromarray(img)
-
-    #             self.data.append((img, torch.Tensor([1,0])))
-
-
-    #     if not self.train:
-    #         if self.shot is None:
-    #             items = os.listdir(os.path.join(self.root, 'normal_256'))
-    #         else:
-    #             items = os.listdir(os.path.join(self.root, 'normal_256'))[:self.shot]
-    #         for idx, item in enumerate(items):
-    #             if not self.full and idx > 9:
-    #                 break
-    #             img = Image.open(os.path.join(self.root, 'normal_256', item)).convert('L').resize(self.img_size)
-    #             img = np.array(img)
-    #             img = np.stack((img,)*3, axis=-1)
-    #             img = Image.fromarray(img)
-
-    #             self.data.append((img, torch.Tensor([1,0])))
-    #         if self.shot is None:
-    #             items = os.listdir(os.path.join(self.root, 'abnormal_256'))
-    #         else:
-    #             items = os.listdir(os.path.join(self.root, 'abnormal_256'))[:self.shot]
-            
-    #         for idx, item in enumerate(items):
-    #             if not self.full and idx > 9:
-    #                 break
-    #             img = Image.open(os.path.join(self.root, 'abnormal_256', item)).convert('L').resize(self.img_size)
-    #             img = np.array(img)
-    #             img = np.stack((img,)*3, axis=-1)
-    #             img = Image.fromarray(img)
-    #             self.data.append((img, torch.Tensor([0,1])))
-        
-        
-
-    #     print('%d data loaded from: %s' % (len(self.data), self.root))
     def load_data(self):
-        if self.train:
-            if self.shot is None:
-                items = os.listdir(os.path.join(self.root, 'normal_256'))
-            else:
-                items = random.sample(os.listdir(os.path.join(self.root, 'normal_256')), self.shot)
 
-
-            for item in items:
-                img = Image.open(os.path.join(self.root, 'normal_256', item)).convert('L').resize(self.img_size)
-                img = np.array(img)
-                img = np.stack((img,)*3, axis=-1)
-                img = Image.fromarray(img)
-
-                self.data.append((img, torch.Tensor([1,0])))
-
-
-        if not self.train:
-            if self.shot is None:
-                items = os.listdir(os.path.join(self.root, 'normal_256'))
-            else:
-                items = os.listdir(os.path.join(self.root, 'normal_256'))[:self.shot]
-            for idx, item in enumerate(items):
-                if not self.full and idx > 9:
-                    break
-                img = Image.open(os.path.join(self.root, 'normal_256', item)).convert('L').resize(self.img_size)
-                img = np.array(img)
-                img = np.stack((img,)*3, axis=-1)
-                img = Image.fromarray(img)
-
-                self.data.append((img, torch.Tensor([1,0])))
-            if self.shot is None:
-                items = os.listdir(os.path.join(self.root, 'abnormal_256'))
-            else:
-                items = os.listdir(os.path.join(self.root, 'abnormal_256'))[:self.shot]
-            
-            for idx, item in enumerate(items):
-                if not self.full and idx > 9:
-                    break
-                img = Image.open(os.path.join(self.root, 'abnormal_256', item)).convert('L').resize(self.img_size)
-                img = np.array(img)
-                img = np.stack((img,)*3, axis=-1)
-                img = Image.fromarray(img)
-                self.data.append((img, torch.Tensor([0,1])))
-        
-        
-
-        print('%d data loaded from: %s' % (len(self.data), self.root))
-    
-
-    def load_anomaly_source_images(self):
-
-        items = os.listdir(os.path.join(self.root, 'normal_256'))
-
-        anomaly_source_images = []
-        for item in items:
-            img = Image.open(os.path.join(self.root, 'normal_256', item)).convert('L').resize(self.img_size)
+        for idx in range(len(self.dataframe)):
+            img_path = self.dataframe.iloc[idx]['FilePath']
+            img = Image.open(img_path).convert('L').resize(self.img_size)
             img = np.array(img)
             img = np.stack((img,)*3, axis=-1)
             img = Image.fromarray(img)
+        
+            label = torch.FloatTensor(self.labels[idx])
+        
+            self.data.append((img, label))
+        print('%d data loaded from: %s' % (len(self.data), self.dataframe))
 
-            anomaly_source_images.append(img)
-
-        return anomaly_source_images
-
-
+    # Function to get data transforms
+    def get_data_transforms(img_size, mode):
+        if mode == "train":
+            train_transform = transforms.Compose([
+                transforms.Resize((img_size[0], img_size[1])),
+                transforms.RandomHorizontalFlip(),
+                transforms.RandomRotation(5),
+                transforms.ColorJitter(brightness=0.1, contrast=0.1),
+                transforms.ToTensor(),
+                transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+            ])
+            return train_transform
+        else:
+            val_test_transform = transforms.Compose([
+                transforms.Resize((img_size[0], img_size[1])),
+                transforms.ToTensor(),
+                transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+            ])
+            return val_test_transform
+        
     def __getitem__(self, index):
         img, label = self.data[index]
-        if self.train == True:
-            ran = random.random()
-            if ran >= self.prob:
-                random_index = random.randint(0, 4)
-                mask = self.masks[random_index]
-                position_name = self.position_names[random_index]
-                img, label = self.anomaly_transform(img, mask)
-            else:
-                random_index = random.randint(0, 4)
-                position_name = self.position_names[random_index]
-                mask = self.masks[random_index]
+        
+        position_name = self.position_names
+        mask = self.masks
+        masks = []
+        for m in mask:
+            m = m.permute(2,0,1)
+            masks.append(m)
+        img= self.transforms(img)
 
-                label = torch.Tensor([1,0])
-
-            mask = mask.permute(2,0,1)
-            img= self.transforms(img)
-
-            return img,  label.long(), mask, position_name
-
-        else:
-            position_name = self.position_names
-            mask = self.masks
-            masks = []
-            for m in mask:
-                m = m.permute(2,0,1)
-                masks.append(m)
-            img= self.transforms(img)
-
-
-
-            return img,  label.long(), masks, position_name
+        return img,  label.long(), masks, position_name
 
     def __len__(self):
         return len(self.data)
