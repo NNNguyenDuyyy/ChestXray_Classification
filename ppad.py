@@ -377,8 +377,7 @@ class ExtractAnomalyFeature(nn.Module):
         device = image.device
 
         #logits = []
-        all_img_features = []
-        all_text_features = []
+        combined_image_text_features = []
         for i in range(len(position_name)):
             p_name = position_name[i] 
             prompts, tokenized_prompts = self.prompt_learner(position_name=p_name, device=device)
@@ -390,19 +389,34 @@ class ExtractAnomalyFeature(nn.Module):
 
             #combined_feature = torch.cat([text_feature, image_feature], dim=-1)
             #combined_feature = image_feature @ text_feature.t()
-            all_img_features.append(image_feature)
-            all_text_features.append(text_feature)
+            # all_img_features.append(image_feature)
+            # all_text_features.append(text_feature)
             #logit = self.logit_scale.exp() * image_feature @ text_feature.t()
             #logits.append(logit)
 
+            # 1. Extract text_feature[1] which has shape [512]
+            text_feature_abnormaly = text_feature[1]  # Shape: [512]
+
+            # 2. Concatenate along last dimension (both are 1D tensors now)
+            combined_feature = torch.cat([image_feature, text_feature_abnormaly], dim=0)  # Shape: [1024]
+
+            # 3. Add a dimension to get shape [1, 1024]
+            #combined_feature = combined_feature.unsqueeze(0)  # Shape: [1, 1024]
+            #image_feature_expanded = image_feature.repeat(2, 1)  # Shape (2, 512)
+            #paired_features = torch.stack([image_feature_expanded, text_feature], dim=1)  # Shape (2, 2, 512)
+
+            # Append to list
+            combined_image_text_features.append(combined_feature)
+
 
         #logits = torch.stack(logits, dim=0)
-        all_img_features = torch.stack(all_img_features, dim=0)
-        all_text_features = torch.stack(all_text_features, dim=0)
-        print(all_img_features.shape, all_text_features.shape)
+        # all_img_features = torch.stack(all_img_features, dim=0)
+        # all_text_features = torch.stack(all_text_features, dim=0)
+        combined_image_text_features = torch.stack(combined_image_text_features, dim=0)  # Shape (10, 2, 512)
+        print(combined_image_text_features.shape)
         #anomaly_features = torch.stack(combined_feature, dim=0)
         #return logits
-        return all_img_features, all_text_features
+        return combined_image_text_features
 
 
 
@@ -424,6 +438,6 @@ class AnomalyEncoder(nn.Module):
 
     def forward(self, image, mask=None, position_name=""):
         #logits
-        img_features, text_features = self.customclip(image, pos_embedding=self.pos_embedding, return_token=self.return_tokens, image_mask=mask, position_name=position_name)
+        combined_image_text_features = self.customclip(image, pos_embedding=self.pos_embedding, return_token=self.return_tokens, image_mask=mask, position_name=position_name)
         #return logits
-        return img_features, text_features
+        return combined_image_text_features

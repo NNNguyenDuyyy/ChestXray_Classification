@@ -53,14 +53,14 @@ class Approach1BranchBaseline(nn.Module):
         self.extract_anomaly_feature.to(device).eval()
         self.cross_attt_classifier = MultiLabelClassifierWithAnomaly(feature_dim, num_heads, num_labels, dropout, fusion_type)
 
-    def forward(self, x):
-        img_features, text_features = self.extract_anomaly_feature(x)  # [bs, 5, 512],  [bs, 5, 2, 512]
+    def forward(self, image, mask, position_name):
+        img_features, text_features = self.extract_anomaly_feature(image, mask, position_name)  # [bs, 512],  [bs, 2, 512]
         logits, _ = self.cross_attt_classifier(img_features, text_features)   # [bs, num_classes]
         print(logits.shape)
         return logits
     
 if __name__ == "__main__":
-    base_model_extract_image = vit_b_16(pretrained=True)
+
     device = "cuda" if torch.cuda.is_available() else "cpu"
     STATUS = ['normal', 'pneumonia']
     feature_dim = 512
@@ -73,7 +73,6 @@ if __name__ == "__main__":
     learner_weight_path = "/content/ChestXray_Classification/weight/PPAD_CheXpert_auc_0.896288_acc_0.842_f1_0.8301075268817204_ap_0.9075604434206554.pt"
 
     pipeline = Approach1BranchBaseline(
-                                base_model_extract_image, 
                                 STATUS, 
                                 backbone_name,
                                 model_path,
@@ -94,5 +93,20 @@ if __name__ == "__main__":
     test_dataset = MaskZhangTrain("/content/ChestXray_Classification/our_test_256_pa", train=False, transforms=test_transform)
     testloader = torch.utils.data.DataLoader(test_dataset, batch_size=2048, shuffle=False, num_workers=32)
 
-    output = pipeline(testloader)    # [bs, num_classes]
+    all_results = []
+    with torch.no_grad():
+        for i, (img, labels, masks, position_names) in enumerate(testloader):
+        
+            image = img.to(device)
+            for mask, position_name in zip(masks, position_names):
+            
+                mask = mask.to(dtype=image.dtype, device=image.device)
+
+                logits = pipeline(image, mask, position_name)
+    
+                print(f"logits: {logits.shape}")
+            
+            all_results.append(logits)
+            print(f"all_results: {all_results.shape}")
+
 

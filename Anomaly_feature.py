@@ -72,8 +72,6 @@ class AnomalyFeature(nn.Module):
         self.model.eval()
 
     def forward(self, testloader):
-        all_img_features = []
-        all_text_features = []
         #all_labels = []
         with torch.no_grad():
             for i, (img, labels, masks, position_names) in enumerate(testloader):
@@ -81,14 +79,13 @@ class AnomalyFeature(nn.Module):
                 image = img.to(device)
                 labels = labels.to(dtype=image.dtype, device=image.device)
 
-                img_features = []
-                text_features = []
+                results_combined_features = []
                 for mask, position_name in zip(masks, position_names):
             
                     mask = mask.to(dtype=image.dtype, device=image.device)
 
                     #logits_per_image = self.model(image, mask, position_name)
-                    img_feature, text_feature = self.model(image, mask, position_name)
+                    combined_feature = self.model(image, mask, position_name)
 
                     # new_logits_per_image = torch.zeros((logits_per_image.shape[0],2))
                     # logits_per_image = logits_per_image.cpu()
@@ -99,11 +96,10 @@ class AnomalyFeature(nn.Module):
             
                     # abnormal_probs = probs[:,1]
 
-                    img_features.append(img_feature)
-                    text_features.append(text_feature)
+                    results_combined_features.append(combined_feature)
                 #temp_results = torch.stack(temp_results, dim=0)
-                all_img_features.append(torch.stack(img_features, dim=0))
-                all_text_features.append(torch.stack(text_features, dim=0))
+                results_combined_features = torch.stack(results_combined_features, dim=0)
+                print(results_combined_features.shape)
                 #max_results = temp_results.max(dim=0)[0]
                 #mean_results = temp_results.mean(dim=0)
 
@@ -116,9 +112,9 @@ class AnomalyFeature(nn.Module):
 
                 # labels = labels.argmax(dim=-1).cpu().numpy()
                 # all_labels.append(labels)
-        print(all_img_features[0].shape)
-        print(all_text_features[0].shape)
-        return all_img_features, all_text_features
+        #print(all_img_features[0].shape)
+        #print(all_text_features[0].shape)
+        #return all_img_features, all_text_features
 
 
 # all_results = np.array(all_results)

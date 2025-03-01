@@ -17,6 +17,6 @@ if __name__ == "__main__":
     for i, (img, labels, masks, position_names) in enumerate(testloader):
         print(i)
         print(img.shape)
-        print(labels)
-        print(masks)
-        print(position_names)
+        print(labels.shape)
+        print(masks.shape)
+        print(position_names.shape)
