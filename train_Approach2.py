@@ -264,10 +264,10 @@ if __name__ == "__main__":
 
     # Create model
     # pre-trained model path
-    model_path = "/content/ChestXray_Classification/weight/best_64_0.0001_original_35000_0.864.pt"
+    model_path = "/kaggle/input/weight-ppad/weight/best_64_0.0001_original_35000_0.864.pt"
 
     # checkpoint path
-    learner_weight_path = "/content/ChestXray_Classification/weight/PPAD_CheXpert_auc_0.896288_acc_0.842_f1_0.8301075268817204_ap_0.9075604434206554.pt"
+    learner_weight_path = "/kaggle/input/weight-ppad/weight/PPAD_CheXpert_auc_0.896288_acc_0.842_f1_0.8301075268817204_ap_0.9075604434206554.pt"
 
     # Load Approach2_Baseline model
     model = Approach2_Baseline(model_path, learner_weight_path)
@@ -297,14 +297,14 @@ if __name__ == "__main__":
     auc_roc_vals = plot_roc_curves(labels, test_outputs, test_labels, when='after training')
 
     # Save model
-    torch.save(model.state_dict(), 'chest_xray_model_final.pth')
+    torch.save(model.state_dict(), '/kaggle/working/chest_xray_model_final.pth')
     torch.save({
         'model_state_dict': model.state_dict(),
         'history': history,
         'labels': labels,
-    }, 'chest_xray_model_complete.pth')
+    }, '/kaggle/working/chest_xray_model_complete.pth')
 
     # Save training history
-    pd.DataFrame.from_dict(history).to_csv('Approach_2_training_history.csv', index=False)
+    pd.DataFrame.from_dict(history).to_csv('/kaggle/working/Approach_2_training_history.csv', index=False)
 
     print("Training and evaluation complete!")
