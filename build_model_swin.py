@@ -7,6 +7,7 @@
 
 from swin_transformer import SwinTransformer
 import torch
+import torch.nn as nn
 
 
 def build_model(model_type):
@@ -55,6 +56,7 @@ if __name__ == '__main__':
     model = build_model('swin')
     n_parameters = sum(p.numel() for p in model.parameters() if p.requires_grad)
     print(f"number of params: {n_parameters}")
-    duumy_input = torch.randn(1, 3, 224, 224)
+    duumy_input = torch.randn(6, 3, 224, 224)
     output = model.forward_features(duumy_input)
+    output = nn.Linear(768, 1024)(output)
     print(output.shape)

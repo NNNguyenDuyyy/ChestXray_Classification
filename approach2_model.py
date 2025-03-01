@@ -11,6 +11,9 @@ from build_model_swin import build_model
 from ppad import AnomalyEncoder
 import warnings
 warnings.filterwarnings("ignore")
+from torch.cuda.amp import autocast
+
+  
 
 class Approach2_Baseline(nn.Module):
     """
@@ -29,25 +32,27 @@ class Approach2_Baseline(nn.Module):
         super(Approach2_Baseline, self).__init__()
         self.model_path = model_path
         self.learner_weight_path = learner_weight_path
-        self.extract_global_image_feature = build_model('swin')
-        self.extract_anomaly_feature = self.load_extract_anomaly_feature(model_path, learner_weight_path)
-        self.mutual_cross_attn = MutualCrossAttentionModel()
+        self.extract_global_image_feature_module = build_model('swin')
+        self.extract_anomaly_feature_module = self.load_extract_anomaly_feature(model_path, learner_weight_path)
+        self.mutual_cross_attn_module = MutualCrossAttentionModel()
         # Define a linear projection layer
         self.proj = nn.Linear(768, 1024)
 
-    def forward(self, image, mask, position_name):
+    def forward(self, image, anomaly_features):
         """
         image: [bs, 3, 224, 224]
+        anomaly_features: [bs, 5, 1024]
         """
-        global_image_feature = self.extract_global_image_feature(image)  # [bs, 768]
+        print("image shape", image.shape)
+        global_image_feature = self.extract_global_image_feature_module.forward_features(image.to(device))  # [bs, 768]
         global_image_feature = self.proj(global_image_feature) # [bs, 1024]
-        anomaly_feature = self.extract_anomaly_feature(image, mask, position_name)  # [bs, 5, 1024]
-        output = self.mutual_cross_attn(anomaly_feature, global_image_feature)  # [bs, num_classes]
+        print("global image shape", global_image_feature.shape)
+        output = self.mutual_cross_attn_module(anomaly_features, global_image_feature)  # [bs, num_classes]
 
         print(output.shape)
         return output
     
-    def load_extract_anomaly_feature(model_path, learner_weight_path):
+    def load_extract_anomaly_feature(self, model_path, learner_weight_path):
 
         model = AnomalyEncoder(
                                 classnames = ['normal', 'pneumonia'],
@@ -63,6 +68,15 @@ class Approach2_Baseline(nn.Module):
 
         model.to(device)
         return model
+    
+    def extract_anomaly_feature(self, image, mask, position_name):
+        """
+        Args:
+            image: [bs, 3, 224, 224]
+            position_name: string
+        """
+        anomaly_feature = self.extract_anomaly_feature_module(image, mask, position_name)
+        return anomaly_feature
     
 if __name__ == "__main__":
     
@@ -89,20 +103,33 @@ if __name__ == "__main__":
 
     # Load Approach2_Baseline model
     model = Approach2_Baseline(model_path, learner_weight_path)
+    model.to(device)
+    model = model.to(torch.float32)
+    # Process all input tensors
+    def process_batch(batch):
+      return {k: v.to(device) for k, v in batch.items() if isinstance(v, torch.Tensor)}
     model.eval()
 
-    with torch.no_grad():
+    with torch.no_grad() and autocast():
         for i, (img, labels, masks, position_names) in enumerate(testloader):
             
             image = img.to(device)
             #labels = labels.to(dtype=image.dtype, device=image.device)
-
+            anomaly_features = []
             for mask, position_name in zip(masks, position_names):
                 
                 mask = mask.to(dtype=image.dtype, device=image.device)
 
-                output = model(image, mask, position_name)
+                anomaly_feature = model.extract_anomaly_feature(image, mask, position_name)
+                anomaly_features.append(anomaly_feature)
+                print("Done First position in 1st testloader loop")
+            anomaly_features = torch.stack(anomaly_features, dim=0)
+            anomaly_features = anomaly_features.permute(1, 0, 2)
+            print("Done extracting anomaly features in 1st testloader loop")
+            print(anomaly_features.shape)
+            output = model(img, anomaly_features)
+            print(output.shape)
+            print(output)
 
-                print("Done First Loop in testloader")
 
 

@@ -128,9 +128,11 @@ class MutualCrossAttentionModel(nn.Module):
 def demo():
     # Set random seed for reproducibility
     torch.manual_seed(42)
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
     # Parameters
-    batch_size = 4
+    batch_size = 6
     embed_dim = 1024
     num_labels = 14
     
@@ -140,6 +142,7 @@ def demo():
     
     # Initialize model
     model = MutualCrossAttentionModel(embed_dim=embed_dim, num_labels=num_labels)
+    model.to(device)
     
     # Forward pass
     output = model(anomaly_feature, global_image_feature)
