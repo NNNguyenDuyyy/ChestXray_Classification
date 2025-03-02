@@ -21,14 +21,30 @@ def train_one_epoch(model, train_loader, criterion, optimizer, device):
     correct = 0
     total = 0
     
-    for inputs, labels in tqdm(train_loader):
-        inputs, labels = inputs.to(device), labels.to(device)
+    for idx, (img, labels, masks, position_names) in enumerate(tqdm(train_loader)):
+        print(f"Batch {idx}: Image shape {img.shape}, Labels shape {labels.shape}, Masks shape {masks.shape}, Position names shape {position_names.shape}")
+        image = img.to(device)
+        labels = labels.to(dtype=image.dtype, device=image.device)
         
         # Zero the parameter gradients
         optimizer.zero_grad()
         
         # Forward
-        outputs = model(inputs)
+        anomaly_features = []
+        for mask, position_name in zip(masks, position_names):
+            
+            mask = mask.to(dtype=image.dtype, device=image.device)
+
+            anomaly_feature = model.extract_anomaly_feature(image, mask, position_name)
+            anomaly_features.append(anomaly_feature)
+            #print("Done First position in 1st testloader loop")
+        anomaly_features = torch.stack(anomaly_features, dim=0)
+        anomaly_features = anomaly_features.permute(1, 0, 2)
+        #print("Done extracting anomaly features in 1st testloader loop")
+        #print(anomaly_features.shape)
+        outputs = model(img, anomaly_features)
+        #print(output.shape)
+        #print(output)
         loss = criterion(outputs, labels)
         
         # Backward + optimize
@@ -36,7 +52,7 @@ def train_one_epoch(model, train_loader, criterion, optimizer, device):
         optimizer.step()
         
         # Statistics
-        running_loss += loss.item() * inputs.size(0)
+        running_loss += loss.item() * img.size(0)
         predicted = (outputs > 0.5).float()
         total += labels.size(0) * labels.size(1)
         correct += (predicted == labels).sum().item()
@@ -56,13 +72,29 @@ def validate(model, valid_loader, criterion, device):
     all_labels = []
     
     with torch.no_grad():
-        for inputs, labels in valid_loader:
-            inputs, labels = inputs.to(device), labels.to(device)
+        for idx, (img, labels, masks, position_names) in enumerate(tqdm(valid_loader)):
+            print(f"Batch {idx}: Image shape {img.shape}, Labels shape {labels.shape}, Masks shape {masks.shape}, Position names shape {position_names.shape}")
+            image = img.to(device)
+            labels = labels.to(dtype=image.dtype, device=image.device)
+            anomaly_features = []
+            for mask, position_name in zip(masks, position_names):
+                
+                mask = mask.to(dtype=image.dtype, device=image.device)
+
+                anomaly_feature = model.extract_anomaly_feature(image, mask, position_name)
+                anomaly_features.append(anomaly_feature)
+                #print("Done First position in 1st testloader loop")
+            anomaly_features = torch.stack(anomaly_features, dim=0)
+            anomaly_features = anomaly_features.permute(1, 0, 2)
+            #print("Done extracting anomaly features in 1st testloader loop")
+            #print(anomaly_features.shape)
+            outputs = model(img, anomaly_features)
+            #print(output.shape)
+            #print(output)
             
-            outputs = model(inputs)
             loss = criterion(outputs, labels)
             
-            running_loss += loss.item() * inputs.size(0)
+            running_loss += loss.item() * img.size(0)
             predicted = (outputs > 0.5).float()
             total += labels.size(0) * labels.size(1)
             correct += (predicted == labels).sum().item()
@@ -292,7 +324,11 @@ if __name__ == "__main__":
     print("TRAINING AND EVALUATION")
     # Train model
     model, history = train_model(
-        model, train_loader, valid_loader, epochs, device
+        model, 
+        train_loader, 
+        valid_loader, 
+        epochs, 
+        device
     )
 
     # Visualize training
