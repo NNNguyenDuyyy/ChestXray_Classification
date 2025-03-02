@@ -201,6 +201,8 @@ if __name__ == "__main__":
     batch_size = 64
     epochs = 10
 
+    print("DATA LOADING")
+
     train_df_main = pd.read_csv('/kaggle/input/chestxray8-dataframe/train_df.csv')
     train_df_main.drop(['No Finding'], axis=1, inplace=True)
     labels = train_df_main.columns[2:-1].tolist()
@@ -262,6 +264,9 @@ if __name__ == "__main__":
         pin_memory=True
     )
 
+    print("DATA LOADING COMPLETE")
+
+    print("LOADING MODEL")
     # Create model
     # pre-trained model path
     model_path = "/kaggle/input/weight-ppad/weight/best_64_0.0001_original_35000_0.864.pt"
@@ -279,7 +284,12 @@ if __name__ == "__main__":
     
     # Summary
     #summary(model, (3, 224, 224))
+    # Verify parameters to train
+    trainable_params = [p for p in model.parameters() if p.requires_grad]
+    print(f"Number of trainable parameters: {sum(p.numel() for p in trainable_params)}")
 
+    print("MODEL LOADING COMPLETE")
+    print("TRAINING AND EVALUATION")
     # Train model
     model, history = train_model(
         model, train_loader, valid_loader, epochs
@@ -307,4 +317,4 @@ if __name__ == "__main__":
     # Save training history
     pd.DataFrame.from_dict(history).to_csv('/kaggle/working/Approach_2_training_history.csv', index=False)
 
-    print("Training and evaluation complete!")
+    print("TRAINING AND EVALUATION COMPLETE")

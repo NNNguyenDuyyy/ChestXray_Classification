@@ -34,6 +34,13 @@ class Approach2_Baseline(nn.Module):
         self.learner_weight_path = learner_weight_path
         self.extract_global_image_feature_module = build_model('swin')
         self.extract_anomaly_feature_module = self.load_extract_anomaly_feature(model_path, learner_weight_path)
+
+        # Freeze extract_global_image_feature_module and extract_anomaly_feature_module
+        for param in self.extract_global_image_feature_module.parameters():
+            param.requires_grad = False
+        for param in self.extract_anomaly_feature_module.parameters():
+            param.requires_grad = False
+
         self.mutual_cross_attn_module = MutualCrossAttentionModel()
         # Define a linear projection layer
         self.proj = nn.Linear(768, 1024)
