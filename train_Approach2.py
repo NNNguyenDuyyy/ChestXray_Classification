@@ -15,7 +15,7 @@ from torch.utils.data import DataLoader
 from approach2_model import Approach2_Baseline
 
 # Function to train model for one epoch
-def train_one_epoch(model, train_loader, criterion, optimizer, device):
+def train_one_epoch(model, train_loader, criterion, optimizer, DEVICE):
     model.train()
     running_loss = 0.0
     correct = 0
@@ -23,7 +23,7 @@ def train_one_epoch(model, train_loader, criterion, optimizer, device):
     
     for idx, (img, labels, masks, position_names) in enumerate(tqdm(train_loader)):
         print(f"Batch {idx}: Image shape {img.shape}, Labels shape {labels.shape}, Masks shape {masks.shape}, Position names shape {position_names.shape}")
-        image = img.to(device)
+        image = img.to(DEVICE)
         labels = labels.to(dtype=image.dtype, device=image.device)
         
         # Zero the parameter gradients
@@ -63,7 +63,7 @@ def train_one_epoch(model, train_loader, criterion, optimizer, device):
     return epoch_loss, epoch_acc
 
 # Function to validate model
-def validate(model, valid_loader, criterion, device):
+def validate(model, valid_loader, criterion, DEVICE):
     model.eval()
     running_loss = 0.0
     correct = 0
@@ -74,7 +74,7 @@ def validate(model, valid_loader, criterion, device):
     with torch.no_grad():
         for idx, (img, labels, masks, position_names) in enumerate(tqdm(valid_loader)):
             print(f"Batch {idx}: Image shape {img.shape}, Labels shape {labels.shape}, Masks shape {masks.shape}, Position names shape {position_names.shape}")
-            image = img.to(device)
+            image = img.to(DEVICE)
             labels = labels.to(dtype=image.dtype, device=image.device)
             anomaly_features = []
             for mask, position_name in zip(masks, position_names):
@@ -142,7 +142,7 @@ def plot_roc_curves(labels_list, predicted_vals, true_labels, when=''):
     return auc_roc_vals
 
 # Main training function
-def train_model(model, train_loader, valid_loader, num_epochs, device):
+def train_model(model, train_loader, valid_loader, num_epochs, DEVICE):
     criterion = FocalLoss(alpha=0.25, gamma=2.0, reduction='mean')
     optimizer = optim.Adam(model.parameters(), lr=1e-4)
     scheduler = get_lr_scheduler(optimizer)
@@ -159,12 +159,12 @@ def train_model(model, train_loader, valid_loader, num_epochs, device):
     for epoch in range(num_epochs):
         # Train
         train_loss, train_acc = train_one_epoch(
-            model, train_loader, criterion, optimizer, device
+            model, train_loader, criterion, optimizer, DEVICE
         )
         
         # Validate
         valid_loss, valid_acc, outputs, labels = validate(
-            model, valid_loader, criterion
+            model, valid_loader, criterion, DEVICE
         )
         
         # Update learning rate
@@ -229,7 +229,7 @@ if __name__ == "__main__":
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(42)
     # Global configuration
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     batch_size = 64
     epochs = 10
 
@@ -300,12 +300,12 @@ if __name__ == "__main__":
     learner_weight_path = "/kaggle/input/weight-ppad/weight/PPAD_CheXpert_auc_0.896288_acc_0.842_f1_0.8301075268817204_ap_0.9075604434206554.pt"
 
     # Load Approach2_Baseline model
-    model = Approach2_Baseline(model_path, learner_weight_path, device)
-    model.to(device)
+    model = Approach2_Baseline(model_path, learner_weight_path, DEVICE)
+    model.to(DEVICE)
     model = model.to(torch.float32)
     # Process all input tensors
     def process_batch(batch):
-      return {k: v.to(device) for k, v in batch.items() if isinstance(v, torch.Tensor)}
+      return {k: v.to(DEVICE) for k, v in batch.items() if isinstance(v, torch.Tensor)}
     
     # Summary
     #summary(model, (3, 224, 224))
@@ -323,7 +323,7 @@ if __name__ == "__main__":
         train_loader, 
         valid_loader, 
         epochs, 
-        device
+        DEVICE
     )
 
     # Visualize training
@@ -331,7 +331,7 @@ if __name__ == "__main__":
 
     # Evaluate on test set
     _, _, test_outputs, test_labels = validate(
-        model, test_loader, FocalLoss(alpha=0.25, gamma=2.0, reduction='mean'), device
+        model, test_loader, FocalLoss(alpha=0.25, gamma=2.0, reduction='mean'), DEVICE
     )
 
     # Plot ROC curves
