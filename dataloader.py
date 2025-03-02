@@ -9,6 +9,7 @@ import torch.optim as optim
 import os
 from matplotlib import pyplot as plt
 import random
+from tqdm import tqdm
 
 
 from mask_generate_anomaly import generate_anomaly_mask
@@ -84,7 +85,7 @@ class ChestXrayDataSet(torch.utils.data.Dataset):
 
     def load_data(self):
 
-        for idx in range(len(self.dataframe)):
+        for idx in tqdm(range(len(self.dataframe))):
             img_path = self.dataframe.iloc[idx]['FilePath'].replace('..', '/kaggle')
             img = Image.open(img_path).convert('L').resize(self.img_size)
             img = np.array(img)

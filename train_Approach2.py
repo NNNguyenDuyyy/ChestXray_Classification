@@ -110,7 +110,7 @@ def plot_roc_curves(labels_list, predicted_vals, true_labels, when=''):
     return auc_roc_vals
 
 # Main training function
-def train_model(model, train_loader, valid_loader, num_epochs):
+def train_model(model, train_loader, valid_loader, num_epochs, device):
     criterion = FocalLoss(alpha=0.25, gamma=2.0, reduction='mean')
     optimizer = optim.Adam(model.parameters(), lr=1e-4)
     scheduler = get_lr_scheduler(optimizer)
@@ -127,7 +127,7 @@ def train_model(model, train_loader, valid_loader, num_epochs):
     for epoch in range(num_epochs):
         # Train
         train_loss, train_acc = train_one_epoch(
-            model, train_loader, criterion, optimizer
+            model, train_loader, criterion, optimizer, device
         )
         
         # Validate
@@ -275,7 +275,7 @@ if __name__ == "__main__":
     learner_weight_path = "/kaggle/input/weight-ppad/weight/PPAD_CheXpert_auc_0.896288_acc_0.842_f1_0.8301075268817204_ap_0.9075604434206554.pt"
 
     # Load Approach2_Baseline model
-    model = Approach2_Baseline(model_path, learner_weight_path)
+    model = Approach2_Baseline(model_path, learner_weight_path, device)
     model.to(device)
     model = model.to(torch.float32)
     # Process all input tensors
@@ -292,7 +292,7 @@ if __name__ == "__main__":
     print("TRAINING AND EVALUATION")
     # Train model
     model, history = train_model(
-        model, train_loader, valid_loader, epochs
+        model, train_loader, valid_loader, epochs, device
     )
 
     # Visualize training

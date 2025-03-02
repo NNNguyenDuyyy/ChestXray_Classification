@@ -20,7 +20,7 @@ class Approach2_Baseline(nn.Module):
     Base line for Approach 2 from input to final output
     """
 
-    def __init__(self, model_path, learner_weight_path):
+    def __init__(self, model_path, learner_weight_path, device):
         """
         Args:
             base_model_extract_image: pretrained weight for extract features, ex: vit_b16
@@ -30,6 +30,7 @@ class Approach2_Baseline(nn.Module):
             num_classes: Number of dataset classes
         """
         super(Approach2_Baseline, self).__init__()
+        self.device = device
         self.model_path = model_path
         self.learner_weight_path = learner_weight_path
         self.extract_global_image_feature_module = build_model('swin')
@@ -51,7 +52,7 @@ class Approach2_Baseline(nn.Module):
         anomaly_features: [bs, 5, 1024]
         """
         print("image shape", image.shape)
-        global_image_feature = self.extract_global_image_feature_module.forward_features(image.to(device))  # [bs, 768]
+        global_image_feature = self.extract_global_image_feature_module.forward_features(image.to(self.device))  # [bs, 768]
         global_image_feature = self.proj(global_image_feature) # [bs, 1024]
         print("global image shape", global_image_feature.shape)
         output = self.mutual_cross_attn_module(anomaly_features, global_image_feature)  # [bs, num_classes]
@@ -73,7 +74,7 @@ class Approach2_Baseline(nn.Module):
             elif name == "customclip.prompt_learner.ctx":
                 model.state_dict()[name].copy_(learner_weights["prompt_learner_ctx"]["ctx"])
 
-        model.to(device)
+        model.to(self.device)
         return model
     
     def extract_anomaly_feature(self, image, mask, position_name):
