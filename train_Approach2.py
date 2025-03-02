@@ -22,7 +22,7 @@ def train_one_epoch(model, train_loader, criterion, optimizer, DEVICE):
     total = 0
     
     for idx, (img, labels, masks, position_names) in enumerate(tqdm(train_loader)):
-        print(f"Batch {idx}: Image shape {img.shape}, Labels shape {labels.shape}, Masks shape {masks.shape}, Position names shape {position_names.shape}")
+        print(f"Batch {idx}: Image shape {img.shape}, Labels shape {labels.shape}, Masks shape {masks.shape}, Position names shape {len(position_names)}")
         image = img.to(DEVICE)
         labels = labels.to(dtype=image.dtype, device=image.device)
         
@@ -73,7 +73,7 @@ def validate(model, valid_loader, criterion, DEVICE):
     
     with torch.no_grad():
         for idx, (img, labels, masks, position_names) in enumerate(tqdm(valid_loader)):
-            print(f"Batch {idx}: Image shape {img.shape}, Labels shape {labels.shape}, Masks shape {masks.shape}, Position names shape {position_names.shape}")
+            print(f"Batch {idx}: Image shape {img.shape}, Labels shape {labels.shape}, Masks shape {masks.shape}, Position names shape {len(position_names)}")
             image = img.to(DEVICE)
             labels = labels.to(dtype=image.dtype, device=image.device)
             anomaly_features = []
