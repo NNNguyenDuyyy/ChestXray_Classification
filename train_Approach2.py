@@ -101,8 +101,8 @@ def validate(model, valid_loader, criterion, DEVICE):
             total += labels.size(0) * labels.size(1)
             correct += (predicted == labels).sum().item()
             
-            all_outputs.append(outputs.cpu().numpy())
-            all_labels.append(labels.cpu().numpy())
+            all_outputs.append(outputs.detach().cpu().numpy())
+            all_labels.append(labels.detach().cpu().numpy())
     
     epoch_loss = running_loss / len(valid_loader.dataset)
     epoch_acc = correct / total
