@@ -295,7 +295,7 @@ if __name__ == "__main__":
         num_workers=4,
         pin_memory=True
     )
-
+   
     print("DATA LOADING COMPLETE")
 
     print("LOADING MODEL")
@@ -319,6 +319,8 @@ if __name__ == "__main__":
     # Verify parameters to train
     trainable_params = [p for p in model.parameters() if p.requires_grad]
     print(f"Number of trainable parameters: {sum(p.numel() for p in trainable_params)}")
+    print(type(model))  # Should be <class '__main__.Approach2_Baseline'>
+    print(type(train_loader))  # Should be <class 'torch.utils.data.DataLoader'> 
 
     print("MODEL LOADING COMPLETE")
     print("TRAINING AND EVALUATION")
