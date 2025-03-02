@@ -6,7 +6,7 @@ import torch.optim as optim
 import numpy as np
 from sklearn.metrics import roc_auc_score, roc_curve
 import matplotlib.pyplot as plt
-import tqdm
+from tqdm import tqdm
 from Focal_loss import FocalLoss
 import pandas as pd
 from sklearn.model_selection import train_test_split
