@@ -244,14 +244,6 @@ if __name__ == "__main__":
     train_and_valid_set, test_set = train_test_split(train_df, test_size=0.2, random_state=1993)
     train_set, valid_set = train_test_split(train_and_valid_set, test_size=0.2, random_state=1993)
 
-    # Check for data leakage
-    patient_col = 'PatientId'
-    if patient_col in train_set.columns and patient_col in valid_set.columns:
-        train_patients = set(train_set[patient_col].values)
-        valid_patients = set(valid_set[patient_col].values)
-        leakage = len(train_patients.intersection(valid_patients)) > 0
-        print(f"Data leakage between train and validation: {leakage}")
-
     # Create data loaders
     train_labels = train_df.iloc[:, 2:-1].values
     
@@ -270,29 +262,30 @@ if __name__ == "__main__":
         dataframe=test_set,
         mode="test"
     )
-    
+    print("Train dataset size: ", len(train_dataset))
+    print(train_dataset[0])
     # Create data loaders
-    train_loader = DataLoader(
+    train_loader = torch.utils.data.DataLoader(
         train_dataset, 
         batch_size=batch_size, 
         shuffle=True, 
-        num_workers=4,
+        num_workers=32,
         pin_memory=True
     )
     
-    valid_loader = DataLoader(
+    valid_loader = torch.utils.data.DataLoader(
         valid_dataset, 
         batch_size=batch_size, 
         shuffle=False, 
-        num_workers=4,
+        num_workers=32,
         pin_memory=True
     )
     
-    test_loader = DataLoader(
+    test_loader = torch.utils.data.DataLoader(
         test_dataset, 
         batch_size=batch_size, 
         shuffle=False, 
-        num_workers=4,
+        num_workers=32,
         pin_memory=True
     )
    
