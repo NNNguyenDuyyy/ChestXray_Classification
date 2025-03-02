@@ -13,6 +13,7 @@ from sklearn.model_selection import train_test_split
 from dataloader import ChestXrayDataSet
 from torch.utils.data import DataLoader
 from approach2_model import Approach2_Baseline
+from torch.cuda.amp import autocast
 
 # Function to train model for one epoch
 def train_one_epoch(model, train_loader, criterion, optimizer, DEVICE):
@@ -21,44 +22,45 @@ def train_one_epoch(model, train_loader, criterion, optimizer, DEVICE):
     correct = 0
     total = 0
     
-    for idx, (img, labels, masks, position_names) in enumerate(tqdm(train_loader)):
-        #print(f"Batch {idx}: Image shape {img.shape}, Labels shape {labels.shape}, Masks shape {masks.shape}, Position names shape {len(position_names)}")
-        image = img.to(DEVICE)
-        labels = labels.to(dtype=image.dtype, device=image.device)
-        
-        # Zero the parameter gradients
-        optimizer.zero_grad()
-        
-        # Forward
-        anomaly_features = []
-        for mask, position_name in zip(masks, position_names):
+    with torch.cuda.amp.autocast():
+        for idx, (img, labels, masks, position_names) in enumerate(tqdm(train_loader)):
+            #print(f"Batch {idx}: Image shape {img.shape}, Labels shape {labels.shape}, Masks shape {masks.shape}, Position names shape {len(position_names)}")
+            image = img.to(DEVICE)
+            labels = labels.to(dtype=image.dtype, device=image.device)
             
-            mask = mask.to(dtype=image.dtype, device=image.device)
+            # Zero the parameter gradients
+            optimizer.zero_grad()
+            
+            # Forward
+            anomaly_features = []
+            for mask, position_name in zip(masks, position_names):
+                
+                mask = mask.to(dtype=image.dtype, device=image.device)
 
-            anomaly_feature = model.extract_anomaly_feature(image, mask, position_name)
-            anomaly_features.append(anomaly_feature)
-            #print("Done First position in 1st testloader loop")
-        anomaly_features = torch.stack(anomaly_features, dim=0)
-        anomaly_features = anomaly_features.permute(1, 0, 2)
-        #print("Done extracting anomaly features in 1st testloader loop")
-        #print(anomaly_features.shape)
-        outputs = model(img, anomaly_features)
-        #print(output.shape)
-        #print(output)
-        loss = criterion(outputs, labels)
-        
-        # Backward + optimize
-        loss.backward()
-        optimizer.step()
-        
-        # Statistics
-        running_loss += loss.item() * img.size(0)
-        predicted = (outputs > 0.5).float()
-        total += labels.size(0) * labels.size(1)
-        correct += (predicted == labels).sum().item()
-        
-    epoch_loss = running_loss / len(train_loader.dataset)
-    epoch_acc = correct / total
+                anomaly_feature = model.extract_anomaly_feature(image, mask, position_name)
+                anomaly_features.append(anomaly_feature)
+                #print("Done First position in 1st testloader loop")
+            anomaly_features = torch.stack(anomaly_features, dim=0)
+            anomaly_features = anomaly_features.permute(1, 0, 2)
+            #print("Done extracting anomaly features in 1st testloader loop")
+            #print(anomaly_features.shape)
+            outputs = model(img, anomaly_features)
+            #print(output.shape)
+            #print(output)
+            loss = criterion(outputs, labels)
+            
+            # Backward + optimize
+            loss.backward()
+            optimizer.step()
+            
+            # Statistics
+            running_loss += loss.item() * img.size(0)
+            predicted = (outputs > 0.5).float()
+            total += labels.size(0) * labels.size(1)
+            correct += (predicted == labels).sum().item()
+            
+        epoch_loss = running_loss / len(train_loader.dataset)
+        epoch_acc = correct / total
     
     return epoch_loss, epoch_acc
 
@@ -71,7 +73,7 @@ def validate(model, valid_loader, criterion, DEVICE):
     all_outputs = []
     all_labels = []
     
-    with torch.no_grad():
+    with torch.no_grad() and autocast():
         for idx, (img, labels, masks, position_names) in enumerate(tqdm(valid_loader)):
             #print(f"Batch {idx}: Image shape {img.shape}, Labels shape {labels.shape}, Masks shape {masks.shape}, Position names shape {len(position_names)}")
             image = img.to(DEVICE)
@@ -156,37 +158,38 @@ def train_model(model, train_loader, valid_loader, num_epochs, DEVICE):
     
     best_valid_loss = float('inf')
     
-    for epoch in range(num_epochs):
-        # Train
-        train_loss, train_acc = train_one_epoch(
-            model, train_loader, criterion, optimizer, DEVICE
-        )
-        
-        # Validate
-        valid_loss, valid_acc, outputs, labels = validate(
-            model, valid_loader, criterion, DEVICE
-        )
-        
-        # Update learning rate
-        scheduler.step()
-        
-        # Save history
-        history['train_loss'].append(train_loss)
-        history['valid_loss'].append(valid_loss)
-        history['train_acc'].append(train_acc)
-        history['valid_acc'].append(valid_acc)
-        
-        # Print statistics
-        print(f'Epoch {epoch+1}/{num_epochs}:')
-        print(f'Train Loss: {train_loss:.4f}, Train Acc: {train_acc:.4f}')
-        print(f'Valid Loss: {valid_loss:.4f}, Valid Acc: {valid_acc:.4f}')
-        print(f'LR: {scheduler.get_last_lr()[0]:.6f}')
-        
-        # Save best model
-        if valid_loss < best_valid_loss:
-            best_valid_loss = valid_loss
-            torch.save(model.state_dict(), 'best_chest_xray_model.pth')
-            print('Model saved!')
+    with torch.cuda.amp.autocast():
+        for epoch in range(num_epochs):
+            # Train
+            train_loss, train_acc = train_one_epoch(
+                model, train_loader, criterion, optimizer, DEVICE
+            )
+            
+            # Validate
+            valid_loss, valid_acc, outputs, labels = validate(
+                model, valid_loader, criterion, DEVICE
+            )
+            
+            # Update learning rate
+            scheduler.step()
+            
+            # Save history
+            history['train_loss'].append(train_loss)
+            history['valid_loss'].append(valid_loss)
+            history['train_acc'].append(train_acc)
+            history['valid_acc'].append(valid_acc)
+            
+            # Print statistics
+            print(f'Epoch {epoch+1}/{num_epochs}:')
+            print(f'Train Loss: {train_loss:.4f}, Train Acc: {train_acc:.4f}')
+            print(f'Valid Loss: {valid_loss:.4f}, Valid Acc: {valid_acc:.4f}')
+            print(f'LR: {scheduler.get_last_lr()[0]:.6f}')
+            
+            # Save best model
+            if valid_loss < best_valid_loss:
+                best_valid_loss = valid_loss
+                torch.save(model.state_dict(), 'best_chest_xray_model.pth')
+                print('Model saved!')
         
     return model, history
 # Function to visualize training progress
