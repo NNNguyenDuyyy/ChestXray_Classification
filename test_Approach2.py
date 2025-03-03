@@ -20,7 +20,7 @@ def load_model_from_checkpoint(
                                model_path, 
                                learner_weight_path, 
                                checkpoint_path,
-                               device="cpu"
+                               device
                                ):
     # Load the model
     model = Approach2_Baseline(
@@ -29,7 +29,7 @@ def load_model_from_checkpoint(
                                 device)
 
     # Load the trained weights
-    model.load_state_dict(torch.load(checkpoint_path, map_location="cpu"), strict=False)
+    model.load_state_dict(torch.load(checkpoint_path, map_location=device), strict=False) 
 
     # Set to evaluation mode
     model.eval()
@@ -44,7 +44,7 @@ if __name__ == "__main__":
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(42)
     # Global configuration
-    DEVICE = torch.device("cpu")
+    DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     batch_size = 64
     epochs = 3
 
@@ -87,7 +87,7 @@ if __name__ == "__main__":
         model_path, 
         learner_weight_path, 
         checkpoint_path,
-        "cpu"
+        DEVICE
     )
    
     model = model.to(torch.float32)
