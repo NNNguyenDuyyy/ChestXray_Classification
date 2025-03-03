@@ -127,6 +127,10 @@ def get_lr_scheduler(optimizer):
 def plot_roc_curves(labels_list, predicted_vals, true_labels, when=''):
     auc_roc_vals = []
     
+    # Create a single figure for all curves
+    plt.figure(figsize=(12, 10))
+    plt.plot([0, 1], [0, 1], 'k--', label='Random')
+    
     for i in range(len(labels_list)):
         try:
             gt = true_labels[:, i]
@@ -135,21 +139,22 @@ def plot_roc_curves(labels_list, predicted_vals, true_labels, when=''):
             auc_roc_vals.append(auc_roc)
             fpr_rf, tpr_rf, _ = roc_curve(gt, pred)
             
-            plt.figure(1, figsize=(10, 10))
-            plt.plot([0, 1], [0, 1], 'k--')
-            plt.plot(fpr_rf, tpr_rf, label=f"{labels_list[i]} ({round(auc_roc, 3)})")
-            plt.xlabel('False positive rate')
-            plt.ylabel('True positive rate')
-            plt.title(f'ROC curve {when}')
-            plt.legend(loc='best')
-            #plt.show()
-
-            plt.savefig(f"/kaggle/working/roc_curve_{i}_{when}.png")
-            plt.close()
-
+            # Add this curve to the same plot
+            plt.plot(fpr_rf, tpr_rf, label=f"{labels_list[i]} (AUC={round(auc_roc, 3)})")
+            
         except Exception as e:
             print(f"Error in generating ROC curve for {labels_list[i]}: {str(e)}")
             auc_roc_vals.append(float('nan'))
+    
+    # Set labels and title once
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    plt.title(f'ROC Curves for All Classes {when}')
+    plt.legend(loc='best')
+    
+    # Save the combined figure
+    plt.savefig(f"/kaggle/working/roc_curves_all_{when}.png", dpi=300, bbox_inches='tight')
+    plt.close()
     
     return auc_roc_vals
 
