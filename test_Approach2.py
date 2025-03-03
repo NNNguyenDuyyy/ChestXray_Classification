@@ -29,7 +29,7 @@ def load_model_from_checkpoint(
                                 device)
 
     # Load the trained weights
-    model.load_state_dict(torch.load(checkpoint_path, map_location=torch.device("cpu")))
+    model.load_state_dict(torch.load(checkpoint_path, map_location="cpu"), strict=False)
 
     # Set to evaluation mode
     model.eval()
@@ -87,7 +87,7 @@ if __name__ == "__main__":
         model_path, 
         learner_weight_path, 
         checkpoint_path,
-        "cuda"
+        "cpu"
     )
    
     model = model.to(torch.float32)
