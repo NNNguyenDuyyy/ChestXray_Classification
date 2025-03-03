@@ -52,7 +52,7 @@ class Approach2_Baseline(nn.Module):
         anomaly_features: [bs, 5, 1024]
         """
         print("image shape", image.shape)
-        global_image_feature = self.extract_global_image_feature_module.forward_features(image.to(self.device))  # [bs, 768]
+        global_image_feature = self.extract_global_image_feature_module.forward_features(image.to(self.device, dtype=torch.float32))  # [bs, 768]
         global_image_feature = self.proj(global_image_feature) # [bs, 1024]
         print("global image shape", global_image_feature.shape)
         output = self.mutual_cross_attn_module(anomaly_features, global_image_feature)  # [bs, num_classes]
