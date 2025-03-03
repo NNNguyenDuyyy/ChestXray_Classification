@@ -103,6 +103,7 @@ if __name__ == "__main__":
     print("EVALUATION")
 
     # Evaluate on test set
+    model = model.to(DEVICE)
     _, _, test_outputs, test_labels = validate(
         model, test_loader, FocalLoss(alpha=0.25, gamma=2.0, reduction='mean'), DEVICE
     )
