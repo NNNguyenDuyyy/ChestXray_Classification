@@ -81,7 +81,7 @@ if __name__ == "__main__":
     # checkpoint path
     learner_weight_path = "/kaggle/input/weight-ppad/weight/PPAD_CheXpert_auc_0.896288_acc_0.842_f1_0.8301075268817204_ap_0.9075604434206554.pt"
 
-    checkpoint_path = "/kaggle/input/weight-Approach2/weight_Approach2/chest_xray_model_final.pth"
+    checkpoint_path = "/kaggle/input/weight-approach2/weight_Approach2/chest_xray_model_final.pth"
     # Load Approach2_Baseline model
     model = load_model_from_checkpoint(
         model_path, 
