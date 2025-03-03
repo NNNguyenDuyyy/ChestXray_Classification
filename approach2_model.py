@@ -51,13 +51,16 @@ class Approach2_Baseline(nn.Module):
         image: [bs, 3, 224, 224]
         anomaly_features: [bs, 5, 1024]
         """
-        print("image shape", image.shape)
+        # In approach2_model.py forward method, add:
+        print(f"Image dtype: {image.dtype}")
+        print(f"Conv layer bias dtype: {self.extract_global_image_feature_module.patch_embed.proj.bias.dtype}")
+        #print("image shape", image.shape)
         global_image_feature = self.extract_global_image_feature_module.forward_features(image.to(self.device, dtype=torch.float32))  # [bs, 768]
         global_image_feature = self.proj(global_image_feature) # [bs, 1024]
-        print("global image shape", global_image_feature.shape)
+        #print("global image shape", global_image_feature.shape)
         output = self.mutual_cross_attn_module(anomaly_features, global_image_feature)  # [bs, num_classes]
 
-        print(output.shape)
+        #print(output.shape)
         return output
     
     def load_extract_anomaly_feature(self, model_path, learner_weight_path):

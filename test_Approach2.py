@@ -91,8 +91,8 @@ if __name__ == "__main__":
         DEVICE
     )
    
-    model = model.to(torch.float32)
-    #model = model.half()
+    #model = model.to(torch.float32)
+    model = model.half()
     # Process all input tensors
     def process_batch(batch):
       return {k: v.to(DEVICE) for k, v in batch.items() if isinstance(v, torch.Tensor)}
