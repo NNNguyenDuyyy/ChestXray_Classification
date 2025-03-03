@@ -185,7 +185,7 @@ def train_model(model, train_loader, valid_loader, num_epochs, DEVICE):
             print(f'Valid Loss: {valid_loss:.4f}, Valid Acc: {valid_acc:.4f}')
             print(f'LR: {scheduler.get_last_lr()[0]:.6f}')
 
-            with open(f"/kaggle/working/Epoch {epoch+1}/{num_epochs}.txt", "w") as file:
+            with open(f"/kaggle/working/Epoch_{epoch+1}_{num_epochs}.txt", "w") as file:
                 file.write(f'Train Loss: {train_loss:.4f}, Train Acc: {train_acc:.4f}')
                 file.write(f'Valid Loss: {valid_loss:.4f}, Valid Acc: {valid_acc:.4f}')
                 file.write(f'LR: {scheduler.get_last_lr()[0]:.6f}')
@@ -239,7 +239,7 @@ if __name__ == "__main__":
     # Global configuration
     DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     batch_size = 64
-    epochs = 10
+    epochs = 3
 
     print("DATA LOADING")
 
