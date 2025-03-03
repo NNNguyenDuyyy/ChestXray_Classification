@@ -110,6 +110,10 @@ def validate(model, valid_loader, criterion, DEVICE):
     epoch_acc = correct / total
     all_outputs = np.vstack(all_outputs)
     all_labels = np.vstack(all_labels)
+
+    with open(f"/kaggle/working/test.txt", "w") as file:
+        file.write(f'Loss: {epoch_loss:.4f}, Acc: {epoch_acc:.4f}')
+            
     
     return epoch_loss, epoch_acc, all_outputs, all_labels
 
@@ -138,7 +142,11 @@ def plot_roc_curves(labels_list, predicted_vals, true_labels, when=''):
             plt.ylabel('True positive rate')
             plt.title(f'ROC curve {when}')
             plt.legend(loc='best')
-            plt.show()
+            #plt.show()
+
+            plt.savefig(f"/kaggle/working/roc_curve_{i}_{when}.png")
+            plt.close()
+
         except Exception as e:
             print(f"Error in generating ROC curve for {labels_list[i]}: {str(e)}")
             auc_roc_vals.append(float('nan'))

@@ -52,8 +52,8 @@ class Approach2_Baseline(nn.Module):
         anomaly_features: [bs, 5, 1024]
         """
         # In approach2_model.py forward method, add:
-        print(f"Image dtype: {image.dtype}")
-        print(f"Conv layer bias dtype: {self.extract_global_image_feature_module.patch_embed.proj.bias.dtype}")
+        #print(f"Image dtype: {image.dtype}")
+        #print(f"Conv layer bias dtype: {self.extract_global_image_feature_module.patch_embed.proj.bias.dtype}")
         #print("image shape", image.shape)
         global_image_feature = self.extract_global_image_feature_module.forward_features(image.to(self.device, dtype=torch.float32))  # [bs, 768]
         global_image_feature = self.proj(global_image_feature) # [bs, 1024]
@@ -133,14 +133,14 @@ if __name__ == "__main__":
 
                 anomaly_feature = model.extract_anomaly_feature(image, mask, position_name)
                 anomaly_features.append(anomaly_feature)
-                print("Done First position in 1st testloader loop")
+                #print("Done First position in 1st testloader loop")
             anomaly_features = torch.stack(anomaly_features, dim=0)
             anomaly_features = anomaly_features.permute(1, 0, 2)
-            print("Done extracting anomaly features in 1st testloader loop")
-            print(anomaly_features.shape)
+            #print("Done extracting anomaly features in 1st testloader loop")
+            #print(anomaly_features.shape)
             output = model(img, anomaly_features)
-            print(output.shape)
-            print(output)
+            #print(output.shape)
+            #print(output)
 
 
 
