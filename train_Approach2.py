@@ -77,6 +77,7 @@ def validate(model, valid_loader, criterion, DEVICE):
         for idx, (img, labels, masks, position_names) in enumerate(tqdm(valid_loader)):
             #print(f"Batch {idx}: Image shape {img.shape}, Labels shape {labels.shape}, Masks shape {masks.shape}, Position names shape {len(position_names)}")
             image = img.to(DEVICE)
+            image = image.float()
             labels = labels.to(dtype=image.dtype, device=image.device)
             anomaly_features = []
             for mask, position_name in zip(masks, position_names):
@@ -90,7 +91,8 @@ def validate(model, valid_loader, criterion, DEVICE):
             anomaly_features = anomaly_features.permute(1, 0, 2)
             #print("Done extracting anomaly features in 1st testloader loop")
             #print(anomaly_features.shape)
-            outputs = model(img, anomaly_features)
+            with torch.cuda.amp.autocast():
+                outputs = model(img, anomaly_features)
             #print(output.shape)
             #print(output)
             
