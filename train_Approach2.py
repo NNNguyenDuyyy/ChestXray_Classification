@@ -184,11 +184,16 @@ def train_model(model, train_loader, valid_loader, num_epochs, DEVICE):
             print(f'Train Loss: {train_loss:.4f}, Train Acc: {train_acc:.4f}')
             print(f'Valid Loss: {valid_loss:.4f}, Valid Acc: {valid_acc:.4f}')
             print(f'LR: {scheduler.get_last_lr()[0]:.6f}')
+
+            with open(f"/kaggle/working/Epoch {epoch+1}/{num_epochs}.txt", "w") as file:
+                file.write(f'Train Loss: {train_loss:.4f}, Train Acc: {train_acc:.4f}')
+                file.write(f'Valid Loss: {valid_loss:.4f}, Valid Acc: {valid_acc:.4f}')
+                file.write(f'LR: {scheduler.get_last_lr()[0]:.6f}')
             
             # Save best model
             if valid_loss < best_valid_loss:
                 best_valid_loss = valid_loss
-                torch.save(model.state_dict(), 'best_chest_xray_model.pth')
+                torch.save(model.state_dict(), f'best_chest_xray_model_on_epoch_{epoch+1}.pth')
                 print('Model saved!')
         
     return model, history
@@ -293,6 +298,12 @@ if __name__ == "__main__":
     )
    
     print("DATA LOADING COMPLETE")
+    # Open a new file in write mode
+    with open("/kaggle/working/DATA_LOADING_COMPLETE.txt", "w") as file:
+        file.write(f"Train dataset size: {len(train_dataset)}\n")
+        file.write(f"Test dataset size: {len(test_dataset)}\n")
+        file.write(f"Valid dataset size: {len(valid_dataset)}\n")
+
 
     print("LOADING MODEL")
     # Create model
@@ -314,11 +325,15 @@ if __name__ == "__main__":
     #summary(model, (3, 224, 224))
     # Verify parameters to train
     trainable_params = [p for p in model.parameters() if p.requires_grad]
+    learnable_params = sum(p.numel() for p in trainable_params)
     print(f"Number of trainable parameters: {sum(p.numel() for p in trainable_params)}")
     print(type(model))  # Should be <class '__main__.Approach2_Baseline'>
     print(type(train_loader))  # Should be <class 'torch.utils.data.DataLoader'> 
 
     print("MODEL LOADING COMPLETE")
+    with open("/kaggle/working/MODEL_LOADING_COMPLETE.txt", "w") as file:
+        file.write(f"Number of trainable parameters: {learnable_params}")
+
     print("TRAINING AND EVALUATION")
     # Train model
     model, history = train_model(
