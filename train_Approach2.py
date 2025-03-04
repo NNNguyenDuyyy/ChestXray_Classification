@@ -15,6 +15,24 @@ from torch.utils.data import DataLoader
 from approach2_model import Approach2_Baseline
 from torch.cuda.amp import autocast
 
+# Custom weighted loss function
+class WeightedBCELoss(nn.Module):
+    def __init__(self, pos_weights, neg_weights, epsilon=1e-7):
+        super(WeightedBCELoss, self).__init__()
+        self.pos_weights = torch.tensor(pos_weights, dtype=torch.float32).to(DEVICE)
+        self.neg_weights = torch.tensor(neg_weights, dtype=torch.float32).to(DEVICE)
+        self.epsilon = epsilon
+        
+    def forward(self, y_pred, y_true):
+        loss = 0.0
+        
+        for i in range(len(self.pos_weights)):
+            # For each class, add average weighted loss for that class
+            loss_pos = -1 * torch.mean(self.pos_weights[i] * y_true[:, i] * torch.log(y_pred[:, i] + self.epsilon))
+            loss_neg = -1 * torch.mean(self.neg_weights[i] * (1 - y_true[:, i]) * torch.log(1 - y_pred[:, i] + self.epsilon))
+            loss += loss_pos + loss_neg
+            
+        return loss
 # Function to train model for one epoch
 def train_one_epoch(model, train_loader, criterion, optimizer, DEVICE):
     model.train()
@@ -159,8 +177,9 @@ def plot_roc_curves(labels_list, predicted_vals, true_labels, when=''):
     return auc_roc_vals
 
 # Main training function
-def train_model(model, train_loader, valid_loader, num_epochs, DEVICE):
-    criterion = FocalLoss(alpha=0.25, gamma=2.0, reduction='mean')
+def train_model(model, train_loader, valid_loader, pos_weights, neg_weights, num_epochs, DEVICE):
+    #criterion = FocalLoss(alpha=0.25, gamma=2.0, reduction='mean')
+    criterion = WeightedBCELoss(pos_weights, neg_weights)
     optimizer = optim.Adam(model.parameters(), lr=1e-4)
     scheduler = get_lr_scheduler(optimizer)
     
@@ -199,11 +218,15 @@ def train_model(model, train_loader, valid_loader, num_epochs, DEVICE):
             print(f'Train Loss: {train_loss:.4f}, Train Acc: {train_acc:.4f}')
             print(f'Valid Loss: {valid_loss:.4f}, Valid Acc: {valid_acc:.4f}')
             print(f'LR: {scheduler.get_last_lr()[0]:.6f}')
-
+            # Ensure full array is printed
+            np.set_printoptions(threshold=np.inf)
             with open(f"/kaggle/working/Epoch_{epoch+1}_{num_epochs}.txt", "w") as file:
                 file.write(f'Train Loss: {train_loss:.4f}, Train Acc: {train_acc:.4f}')
                 file.write(f'Valid Loss: {valid_loss:.4f}, Valid Acc: {valid_acc:.4f}')
                 file.write(f'LR: {scheduler.get_last_lr()[0]:.6f}')
+                file.write(f'Outputs: {outputs}\n')
+                file.write(f'labels: {labels}')
+
             
             # Save best model
             if valid_loss < best_valid_loss:
@@ -222,6 +245,9 @@ def visualize_training(history, lw=3):
     plt.ylabel('Accuracy')
     plt.legend(fontsize='x-large')
     plt.show()
+    # Save the combined figure
+    plt.savefig(f"/kaggle/working/Acc.png", dpi=300, bbox_inches='tight')
+    plt.close()
     
     plt.figure(figsize=(10, 6))
     plt.plot(history['train_loss'], label='training', marker='*', linewidth=lw)
@@ -231,6 +257,9 @@ def visualize_training(history, lw=3):
     plt.ylabel('Loss')
     plt.legend(fontsize='x-large')
     plt.show()
+    # Save the combined figure
+    plt.savefig(f"/kaggle/working/Loss.png", dpi=300, bbox_inches='tight')
+    plt.close()
 
 # Get label string from binary vector
 def get_label(y, labels_list):
@@ -243,6 +272,23 @@ def get_label(y, labels_list):
     else:
         return '|'.join(ret_labels)
 
+# Function to compute class frequencies
+def compute_class_freqs(labels):
+    """
+    Compute positive and negative frequencies for each class.
+    
+    Args:
+        labels (np.array): matrix of labels, size (num_examples, num_classes)
+    Returns:
+        positive_frequencies (np.array): array of positive frequencies for each class
+        negative_frequencies (np.array): array of negative frequencies for each class
+    """
+    N = labels.shape[0]
+    positive_frequencies = labels.sum(axis=0) / N
+    negative_frequencies = 1.0 - positive_frequencies
+    
+    return positive_frequencies, negative_frequencies
+
 
 if __name__ == "__main__":
 
@@ -253,7 +299,7 @@ if __name__ == "__main__":
         torch.cuda.manual_seed_all(42)
     # Global configuration
     DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    batch_size = 64
+    batch_size = 32
     epochs = 3
 
     print("DATA LOADING")
@@ -269,6 +315,9 @@ if __name__ == "__main__":
 
     # Create data loaders
     train_labels = train_df.iloc[:, 2:-1].values
+    freq_pos, freq_neg = compute_class_freqs(train_labels)
+    pos_weights = freq_neg
+    neg_weights = freq_pos
     
     # Create datasets
     train_dataset = ChestXrayDataSet(
@@ -355,6 +404,8 @@ if __name__ == "__main__":
         model, 
         train_loader, 
         valid_loader, 
+        pos_weights,
+        neg_weights,
         epochs, 
         DEVICE
     )
@@ -364,7 +415,7 @@ if __name__ == "__main__":
 
     # Evaluate on test set
     _, _, test_outputs, test_labels = validate(
-        model, test_loader, FocalLoss(alpha=0.25, gamma=2.0, reduction='mean'), DEVICE
+        model, test_loader, WeightedBCELoss(pos_weights, neg_weights), DEVICE
     )
 
     # Plot ROC curves

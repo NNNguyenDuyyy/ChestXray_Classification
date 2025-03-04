@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 class MutualCrossAttentionModel(nn.Module):
-    def __init__(self, embed_dim=1024, num_labels=14, num_heads=8):
+    def __init__(self, embed_dim=1024, num_labels=14, num_heads=2):
         super(MutualCrossAttentionModel, self).__init__()
         self.embed_dim = embed_dim
         
