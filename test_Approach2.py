@@ -107,6 +107,8 @@ if __name__ == "__main__":
     _, _, test_outputs, test_labels = validate(
         model, test_loader, FocalLoss(alpha=0.25, gamma=2.0, reduction='mean'), DEVICE
     )
-
+    with open(f"/kaggle/working/Labels_and_Results.txt", "w") as file:
+        file.write(f'Test outputs: {test_outputs}\n')
+        file.write(f'Test labels: {test_labels}')
     # Plot ROC curves
     auc_roc_vals = plot_roc_curves(labels, test_outputs, test_labels, when='after training')

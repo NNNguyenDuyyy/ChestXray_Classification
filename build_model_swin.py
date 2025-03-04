@@ -7,7 +7,10 @@
 
 from swin_transformer import SwinTransformer
 import torch
+from torchvision import transforms
 import torch.nn as nn
+from PIL import Image
+import numpy as np
 
 
 def build_model(model_type):
@@ -56,7 +59,23 @@ if __name__ == '__main__':
     model = build_model('swin')
     n_parameters = sum(p.numel() for p in model.parameters() if p.requires_grad)
     print(f"number of params: {n_parameters}")
-    duumy_input = torch.randn(6, 3, 224, 224)
-    output = model.forward_features(duumy_input)
-    output = nn.Linear(768, 1024)(output)
+    #duumy_input = torch.randn(6, 3, 224, 224)
+    image_path = r"C:\Users\pc\PycharmProjects\ChestXray_Classification\ChestXray_Classification\3_images_to_test\normal_256\00960.jpg"
+    image = Image.open(image_path).convert("RGB")  # Ensure 3 channels (RGB)
+
+    # Define transformation
+    transform = transforms.Compose([
+        transforms.Resize((224, 224)),  # Resize to 224x224
+        transforms.ToTensor(),          # Convert to Tensor and normalize to [0, 1]
+    ])
+
+    # Apply transformation
+    image_tensor = transform(image)  # Shape: [3, 224, 224]
+
+    # Add batch dimension
+    bs = 1  # Change this according to your batch size
+    image_batch = image_tensor.unsqueeze(0).repeat(bs, 1, 1, 1)  # Shape: [bs, 3, 224, 224]
+    output = model.forward_features(image_batch)
+    #output = nn.Linear(768, 1024)(output)
     print(output.shape)
+    print(output)
